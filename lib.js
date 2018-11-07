@@ -154,6 +154,16 @@ var make_tag = (tag_name, props_array) =>
 var as_html_el = (tag_name, propsArray) =>
   isEmptyElement(tag_name) ? () => make_tag(tag_name, propsArray) : val => make_tag(tag_name, propsArray) + val + "</" + tag_name + ">"
 
+var as_td    = as_html_el("td")
+var as_tr    = as_html_el("tr")
+var as_table = as_html_el("table", ["border=1", "cellpadding=3","cellspacing=0"])
+var as_h1    = as_html_el("h1")
+var as_h2    = as_html_el("h2")
+var as_pre   = as_html_el("pre")
+var as_body  = as_html_el("body")
+var as_html  = as_html_el("html")
+var as_doc   = compose(as_body)(as_html)
+
 // Transform and object in a Name/Type/Value table
 // This funtion only works on objects that can be JSON.stringified (I.E. objects that do not contain circular references)
 var obj_to_table = tab_arg => obj_to_table_int(unpack_obj(tab_arg,[]))
@@ -199,15 +209,15 @@ module.exports = {
 , as_html_el : as_html_el
   
   // HTML element partial functions
-, as_td      : as_html_el("td")
-, as_tr      : as_html_el("tr")
-, as_table   : as_html_el("table", ["border=1", "cellpadding=3","cellspacing=0"])
-, as_h1      : as_html_el("h1")
-, as_h2      : as_html_el("h2")
-, as_pre     : as_html_el("pre")
-, as_body    : as_html_el("body")
-, as_html    : as_html_el("html")
-, as_doc     : compose(as_body)(as_html)
+, as_td      : as_td
+, as_tr      : as_tr
+, as_table   : as_table
+, as_h1      : as_h1
+, as_h2      : as_h2
+, as_pre     : as_pre
+, as_body    : as_body
+, as_html    : as_html
+, as_doc     : as_doc
 
   // Transform an object into a Name/Type/Value HTML table
 , obj_to_table : obj_to_table
