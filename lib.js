@@ -195,8 +195,6 @@ module.exports = {
 , push    : push
 , unshift : unshift
 
-, unpack_obj : unpack_obj
-
 // Formatting parameters
 , set_depth_limit  : set_depth_limit
 , get_depth_limit  : get_depth_limit
