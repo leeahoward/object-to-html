@@ -1,5 +1,5 @@
 {
-  "name": "basic-utils",
+  "name": "@chris_whealy/basic-utils",
   "description": "Various helpful JavaScript utilities",
   "version": "1.0.0",
   "author": {
@@ -7,10 +7,10 @@
     "email": "chris@whealy.com",
     "url": "http://whealy.com/"
   },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/ChrisWhealy/basic-utils"
-  },
+  "keywords": [
+    "utilities"
+  ],
+  "repository": "github:ChrisWhealy/basic-utils",
   "dependencies": {},
   "devDependencies": {},
   "license": "Apache 2.0",
