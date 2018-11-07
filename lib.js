@@ -100,7 +100,7 @@ var obj_to_str = (obj_arg, depth) => {
     }
 
     // Join the accumulator array into a string then top and tail it with curly braces
-    return (acc.length > 0) ? "{\n" + acc.join(`\n${pad}, `) + "\n" + pad + "}" : "{}"
+    return (acc.length > 0) ? `{\n${pad}${acc.join(`\n${pad}, `)}\n${pad}}` : "{}"
   }
 }
 
@@ -166,7 +166,8 @@ var as_doc   = compose(as_body)(as_html)
 
 // Transform and object in a Name/Type/Value table
 // This funtion only works on objects that can be JSON.stringified (I.E. objects that do not contain circular references)
-var obj_to_table = tab_arg => obj_to_table_int(unpack_obj(tab_arg,[]))
+var obj_to_table = obj_arg => obj_to_table_int(unpack_obj(obj_arg,[]))
+
 
 var obj_to_table_int = ntvObjArray =>
   as_table(
@@ -174,7 +175,7 @@ var obj_to_table_int = ntvObjArray =>
       as_tr(
         [ as_td(ntv.prop_name)
         , as_td(ntv.prop_type)
-        , as_td(ntv.prop_type === "Object" ? obj_to_table(ntv.prop_value) : ntv.prop_value)
+        , as_td(ntv.prop_type === "Object" ? obj_to_table_int(ntv.prop_value) : ntv.prop_value)
         ].join("")
       )
     ).join("")
@@ -186,13 +187,15 @@ var obj_to_table_int = ntvObjArray =>
 // PUBLIC API
 // *********************************************************************************************************************
 module.exports = {
-  // Fundamental operations
+// Fundamental operations
   isNullOrUndef : isNullOrUndef
 , typeOf        : typeOf
 
-  // Array operations suitable for use with map or reduce
+// Array operations suitable for use with map or reduce
 , push    : push
 , unshift : unshift
+
+, unpack_obj : unpack_obj
 
 // Formatting parameters
 , set_depth_limit  : set_depth_limit
@@ -205,10 +208,10 @@ module.exports = {
 , object_to_str    : obj_to_str
 , map_to_str       : map_to_str
 
-  // HTML element generator
+// HTML element generator
 , as_html_el : as_html_el
   
-  // HTML element partial functions
+// HTML element partial functions
 , as_td      : as_td
 , as_tr      : as_tr
 , as_table   : as_table
@@ -219,6 +222,6 @@ module.exports = {
 , as_html    : as_html
 , as_doc     : as_doc
 
-  // Transform an object into a Name/Type/Value HTML table
-, obj_to_table : obj_to_table
+// Transform an object into a Name/Type/Value HTML table
+, object_to_table : obj_to_table
 }
