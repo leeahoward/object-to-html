@@ -194,6 +194,22 @@ var obj_to_table_int = (tab_props, ntvObjArray) =>
     ).join("")
   )
 
+var evt_to_table = (tab_props, evt) =>
+  as_table(tab_props,
+    [ as_tr([], [as_td([],"eventType"),           as_td([], evt.eventType)].join(""))
+    , as_tr([], [as_td([],"eventTypeVersion"),    as_td([], evt.eventTypeVersion)].join(""))
+    , as_tr([], [as_td([],"cloudEventsVersion"),  as_td([], evt.cloudEventsVersion)].join(""))
+    , as_tr([], [as_td([],"source"),              as_td([], evt.source)].join(""))
+    , as_tr([], [as_td([],"eventID"),             as_td([], evt.eventID)].join(""))
+    , as_tr([], [as_td([],"eventTime"),           as_td([], ts_to_str(evt.eventTime))].join(""))
+    , as_tr([], [as_td([],"schemaURL"),           as_td([], evt.schemaURL)].join(""))
+    , as_tr([], [as_td([],"contentType"),         as_td([], evt.contentType)].join(""))
+    , as_tr([], [as_td([],"extensions.request"),  as_td([], as_pre([], obj_to_str(evt.extensions.request)))].join(""))
+    , as_tr([], [as_td([],"extensions.response"), as_td([], as_pre([], obj_to_str(evt.extensions.response)))].join(""))
+    , as_tr([], [as_td([],"data"),                as_td([], as_pre([], obj_to_str(evt.data)))].join(""))
+    ].join("")
+  )
+
 
 
 // *********************************************************************************************************************
@@ -236,5 +252,6 @@ module.exports = {
 , map_to_str       : map_to_str
 
 // Transform an object into a Name/Type/Value HTML table
+, event_to_table  : evt_to_table
 , object_to_table : obj_to_table
 }
