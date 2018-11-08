@@ -146,7 +146,7 @@ var unpack_obj = (obj, acc) =>
 
 // *********************************************************************************************************************
 // Generate HTML elements
-const bg_light_grey = "style=background-color: #DDD;"
+const bg_light_grey = "style=\"background-color:#DDD;\""
 
 const emptyElements = ['area', 'base', 'basefont', 'br', 'col', 'frame', 'hr'
 , 'img', 'input', 'isindex', 'link', 'meta', 'param', 'command', 'keygen', 'source']
