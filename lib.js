@@ -11,11 +11,6 @@
  **/
 
 // *********************************************************************************************************************
-// Fundamental operators
-var compose = fn1 => fn2 => val => fn2(fn1(val))
-
-
-// *********************************************************************************************************************
 // Type checking operations
 var typeOf        = x => Object.prototype.toString.apply(x).slice(8).slice(0, -1)
 var isNullOrUndef = x => x === undefined || x === null
@@ -163,9 +158,10 @@ var as_html_el = tag_name =>
   (propsArray, val) =>
     `${make_tag(tag_name, propsArray)}${isEmptyElement(tag_name) || isNullOrUndef(val) ? "" : val}</${tag_name}>`
 
-var as_td    = as_html_el("td")
-var as_tr    = as_html_el("tr")
 var as_table = as_html_el("table")
+var as_tr    = as_html_el("tr")
+var as_td    = as_html_el("td")
+var as_th    = as_html_el("th")
 var as_h1    = as_html_el("h1")
 var as_h2    = as_html_el("h2")
 var as_pre   = as_html_el("pre")
@@ -184,14 +180,18 @@ var obj_to_table = (tab_props, obj_arg) =>
 
 var obj_to_table_int = (tab_props, ntvObjArray) =>
   as_table(tab_props,
-    ntvObjArray.map(ntv =>
-      as_tr([],
-        [ as_td([], ntv.prop_name)
-        , as_td([], ntv.prop_type)
-        , as_td([], ntv.prop_type === "Object" ? obj_to_table_int(tab_props, ntv.prop_value) : ntv.prop_value)
-        ].join("")
-      )
-    ).join("")
+    // Start with a header row
+    [ as_tr([], [as_th([],"Property"), as_th([],"Value")].join(""))
+    // Each element from the ntv array becomes a table row
+    , ntvObjArray.map(ntv =>
+        as_tr([],
+          [ as_td([], ntv.prop_name)
+          , as_td([], ntv.prop_type)
+          , as_td([], ntv.prop_type === "Object" ? obj_to_table_int(tab_props, ntv.prop_value) : ntv.prop_value)
+          ].join("")
+        )
+      ).join("")
+    ].join("")
   )
 
 var evt_to_table = (tab_props, evt) =>
@@ -231,9 +231,10 @@ module.exports = {
 , as_html_el : as_html_el
 
 // HTML element partial functions
-, as_td      : as_td
-, as_tr      : as_tr
 , as_table   : as_table
+, as_tr      : as_tr
+, as_th      : as_th
+, as_td      : as_td
 , as_h1      : as_h1
 , as_h2      : as_h2
 , as_pre     : as_pre

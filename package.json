@@ -1,7 +1,7 @@
 {
   "name": "basic-formatting-utils",
   "description": "Various helpful JavaScript utilities",
-  "version": "1.0.8",
+  "version": "1.0.9",
   "author": {
     "name": "Chris Whealy",
     "email": "chris@whealy.com",
