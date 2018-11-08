@@ -181,7 +181,7 @@ var obj_to_table = (tab_props, obj_arg) =>
 var obj_to_table_int = (tab_props, ntvObjArray) =>
   as_table(tab_props,
     // Start with a header row
-    [ as_tr([], [as_th([],"Property"), as_th([],"Value")].join(""))
+    [ as_tr([], [as_th([],"Property"), as_th([],"Type"), as_th([],"Value")].join(""))
     // Each element from the ntv array becomes a table row
     , ntvObjArray.map(ntv =>
         as_tr([],
@@ -196,7 +196,8 @@ var obj_to_table_int = (tab_props, ntvObjArray) =>
 
 var evt_to_table = (tab_props, evt) =>
   as_table(tab_props,
-    [ as_tr([], [as_td([],"eventType"),           as_td([], evt.eventType)].join(""))
+    [ as_tr([], [as_th([],"Property"),            as_th([],"Value")].join(""))
+    , as_tr([], [as_td([],"eventType"),           as_td([], evt.eventType)].join(""))
     , as_tr([], [as_td([],"eventTypeVersion"),    as_td([], evt.eventTypeVersion)].join(""))
     , as_tr([], [as_td([],"cloudEventsVersion"),  as_td([], evt.cloudEventsVersion)].join(""))
     , as_tr([], [as_td([],"source"),              as_td([], evt.source)].join(""))
