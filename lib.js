@@ -4,7 +4,7 @@
  * =====================================================================================================================
  * @fileOverview basic-utils
  * 
- * A node library containing various helpful utilities functions
+ * A node library containing various helpful formatting functions
  * 
  * Author : Chris Whealy (www.whealy.com)
  * =====================================================================================================================
@@ -29,7 +29,7 @@ var unshift = (arr, newEl) => (_ => arr)(arr.unshift(newEl))
 // Transform various datatypes to strings
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-// Limit the recursion depth used by str_to_obj()
+// Limit the recursion depth used by obj_to_str()
 var depth_limit = 2
 var indent_by   = 2 
 var padding = " ".repeat(depth_limit * indent_by)
@@ -170,8 +170,8 @@ var as_html  = as_html_el("html")
 
 // Transform and object in a Name/Type/Value table
 // This funtion only works on objects that can be JSON.stringified (I.E. objects that do not contain circular references)
-// If you pass the object argument as the only parameter, then obj_arg will be undefined, so assume an empty array for
-// the tab_props arg
+// If you pass the object argument as the only parameter, then obj_arg will be undefined and tab_props will contain the
+// the object to be transformed.  Therefore, assume an empty array for the tab_props arg
 var obj_to_table = (tab_props, obj_arg) =>
   isNullOrUndef(obj_arg)
   ? obj_to_table_int([], unpack_obj(tab_props,[]))
@@ -194,6 +194,7 @@ var obj_to_table_int = (tab_props, ntvObjArray) =>
     ].join("")
   )
 
+
 var evt_to_table = (tab_props, evt) =>
   as_table(tab_props,
     [ as_tr([], [as_th([],"Property"),            as_th([],"Value")].join(""))
@@ -212,7 +213,6 @@ var evt_to_table = (tab_props, evt) =>
   )
 
 
-
 // *********************************************************************************************************************
 // PUBLIC API
 // *********************************************************************************************************************
@@ -228,7 +228,10 @@ module.exports = {
 , push    : push
 , unshift : unshift
 
-// HTML element generator
+// Generic HTML element generator.
+// When called with only the element's tag name, it returns a partial function requiring an array of the elements
+// property values, followed by the element's content in a form that is either a string, or where calling that object's
+// toString() function returns something useful
 , as_html_el : as_html_el
 
 // HTML element partial functions
