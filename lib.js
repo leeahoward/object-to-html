@@ -146,6 +146,8 @@ var unpack_obj = (obj, acc) =>
 
 // *********************************************************************************************************************
 // Generate HTML elements
+const bg_light_grey = "style=background-color: #DDD;"
+
 const emptyElements = ['area', 'base', 'basefont', 'br', 'col', 'frame', 'hr'
 , 'img', 'input', 'isindex', 'link', 'meta', 'param', 'command', 'keygen', 'source']
 
@@ -169,9 +171,11 @@ var as_body  = as_html_el("body")
 var as_html  = as_html_el("html")
 
 // Transform and object in a Name/Type/Value table
-// This funtion only works on objects that can be JSON.stringified (I.E. objects that do not contain circular references)
-// If you pass the object argument as the only parameter, then obj_arg will be undefined and tab_props will contain the
-// the object to be transformed.  Therefore, assume an empty array for the tab_props arg
+// This function only works on objects that can be JSON.stringified (I.E. objects that do not contain circular
+// references)
+// If you omit the table properties array argument and pass the object argument as the only parameter, then obj_arg will
+// be undefined and tab_props will contain the object to be transformed.
+// Therefore, assume an empty array for the tab_props arg
 var obj_to_table = (tab_props, obj_arg) =>
   isNullOrUndef(obj_arg)
   ? obj_to_table_int([], unpack_obj(tab_props,[]))
@@ -181,7 +185,12 @@ var obj_to_table = (tab_props, obj_arg) =>
 var obj_to_table_int = (tab_props, ntvObjArray) =>
   as_table(tab_props,
     // Start with a header row
-    [ as_tr([], [as_th([],"Property"), as_th([],"Type"), as_th([],"Value")].join(""))
+    [ as_tr( []
+           , [ as_th([bg_light_grey],"Property")
+             , as_th([bg_light_grey],"Type")
+             , as_th([bg_light_grey],"Value")
+             ].join("")
+           )
     // Each element from the ntv array becomes a table row
     , ntvObjArray.map(ntv =>
         as_tr([],
@@ -197,7 +206,9 @@ var obj_to_table_int = (tab_props, ntvObjArray) =>
 
 var evt_to_table = (tab_props, evt) =>
   as_table(tab_props,
-    [ as_tr([], [as_th([],"Property"),            as_th([],"Value")].join(""))
+    // Header Row
+    [ as_tr([], [as_th([bg_light_grey],"Property"), as_th([bg_light_grey],"Value")].join(""))
+    // Event object properties
     , as_tr([], [as_td([],"eventType"),           as_td([], evt.eventType)].join(""))
     , as_tr([], [as_td([],"eventTypeVersion"),    as_td([], evt.eventTypeVersion)].join(""))
     , as_tr([], [as_td([],"cloudEventsVersion"),  as_td([], evt.cloudEventsVersion)].join(""))
