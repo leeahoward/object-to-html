@@ -171,7 +171,6 @@ var as_h2    = as_html_el("h2")
 var as_pre   = as_html_el("pre")
 var as_body  = as_html_el("body")
 var as_html  = as_html_el("html")
-var as_doc   = compose(as_body)(as_html)
 
 // Transform and object in a Name/Type/Value table
 // This funtion only works on objects that can be JSON.stringified (I.E. objects that do not contain circular references)
@@ -224,7 +223,6 @@ module.exports = {
 , as_pre     : as_pre
 , as_body    : as_body
 , as_html    : as_html
-, as_doc     : as_doc
 
 // Formatting parameters
 , set_depth_limit  : set_depth_limit
