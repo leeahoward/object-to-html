@@ -11,15 +11,18 @@
  **/
 
 // *********************************************************************************************************************
-// Fundamental operations
+// Fundamental operators
 var compose = fn1 => fn2 => val => fn2(fn1(val))
-var typeOf  = x   => Object.prototype.toString.apply(x).slice(8).slice(0, -1)
 
 
 // *********************************************************************************************************************
 // Type checking operations
+var typeOf        = x => Object.prototype.toString.apply(x).slice(8).slice(0, -1)
 var isNullOrUndef = x => x === undefined || x === null
 var isNumeric     = x => typeOf(x) === "Number"
+var isArray       = x => typeOf(x) === "Array"
+var isMap         = x => typeOf(x) === "Map"
+
 
 // *********************************************************************************************************************
 // Array operations that can be used in chained function calls such as map and reduce
@@ -62,8 +65,8 @@ var ts_to_str = ts_arg => isNullOrUndef(ts_arg) ? ts_arg : (new Date(ts_arg)).to
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // Object to string
-// This function is needed in situations where JSON.stringify() blows up "Callstack size exceeded" due to the object
-// containing circular references
+// This function is needed in situations where JSON.stringify() explodes with a "Callstack size exceeded" error due to
+// the object containing circular references
 var obj_to_str = (obj_arg, depth) => {
   // Set current recursion depth to 0 if the argument is missing
   depth = depth || 0
@@ -100,25 +103,30 @@ var obj_to_str = (obj_arg, depth) => {
     }
 
     // Join the accumulator array into a string then top and tail it with curly braces
-    return (acc.length > 0) ? `{\n${pad}${acc.join(`\n${pad}, `)}\n${pad}}` : "{}"
+    return (acc.length > 0) ? `{\n${pad}  ${acc.join(`\n${pad}, `)}\n${pad}}` : "{}"
   }
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // Transform a Map object into a printable form
 var map_to_str = map_arg => {
-  if (isNullOrUndef(map_arg)) {
-    return map_arg
-  }
-  else {
-    var acc = []
-    var iter = map_arg[Symbol.iterator]()
-
-    for (let el of iter) {
-      acc.push(`["${el[0]}", ${el[1]}]`)
+  if (isMap(map_arg)) {
+    if (isNullOrUndef(map_arg)) {
+      return map_arg
     }
-
-    return acc.join(", ")
+    else {
+      var acc = []
+      var iter = map_arg[Symbol.iterator]()
+  
+      for (let el of iter) {
+        acc.push(`["${el[0]}", ${el[1]}]`)
+      }
+  
+      return acc.join(", ")
+    }
+  }
+  else  {
+    return "Not a Map object"
   }
 }
 
@@ -149,14 +157,15 @@ const emptyElements = ['area', 'base', 'basefont', 'br', 'col', 'frame', 'hr'
 var isEmptyElement = tag_name => emptyElements.indexOf(tag_name) >= 0
 
 var make_tag = (tag_name, props_array) =>
-  "<" + tag_name + (isNullOrUndef(props_array) ? "" : " " + props_array.join(" ")) + ">"
+  `<${tag_name}${(isNullOrUndef(props_array) || props_array.length === 0 ? "" : " " + props_array.join(" "))}>`
 
-var as_html_el = (tag_name, propsArray) =>
-  isEmptyElement(tag_name) ? () => make_tag(tag_name, propsArray) : val => make_tag(tag_name, propsArray) + val + "</" + tag_name + ">"
+var as_html_el = tag_name =>
+  (propsArray, val) =>
+    `${make_tag(tag_name, propsArray)}${isEmptyElement(tag_name) || isNullOrUndef(val) ? "" : val}</${tag_name}>`
 
 var as_td    = as_html_el("td")
 var as_tr    = as_html_el("tr")
-var as_table = as_html_el("table", ["border=1", "cellpadding=3","cellspacing=0"])
+var as_table = as_html_el("table")
 var as_h1    = as_html_el("h1")
 var as_h2    = as_html_el("h2")
 var as_pre   = as_html_el("pre")
@@ -166,16 +175,21 @@ var as_doc   = compose(as_body)(as_html)
 
 // Transform and object in a Name/Type/Value table
 // This funtion only works on objects that can be JSON.stringified (I.E. objects that do not contain circular references)
-var obj_to_table = obj_arg => obj_to_table_int(unpack_obj(obj_arg,[]))
+// If you pass the object argument as the only parameter, then obj_arg will be undefined, so assume an empty array for
+// the tab_props arg
+var obj_to_table = (tab_props, obj_arg) =>
+  isNullOrUndef(obj_arg)
+  ? obj_to_table_int([], unpack_obj(tab_props,[]))
+  : obj_to_table_int(tab_props, unpack_obj(obj_arg,[]))
 
 
-var obj_to_table_int = ntvObjArray =>
-  as_table(
+var obj_to_table_int = (tab_props, ntvObjArray) =>
+  as_table(tab_props,
     ntvObjArray.map(ntv =>
-      as_tr(
-        [ as_td(ntv.prop_name)
-        , as_td(ntv.prop_type)
-        , as_td(ntv.prop_type === "Object" ? obj_to_table_int(ntv.prop_value) : ntv.prop_value)
+      as_tr([],
+        [ as_td([], ntv.prop_name)
+        , as_td([], ntv.prop_type)
+        , as_td([], ntv.prop_type === "Object" ? obj_to_table_int(tab_props, ntv.prop_value) : ntv.prop_value)
         ].join("")
       )
     ).join("")
@@ -187,13 +201,30 @@ var obj_to_table_int = ntvObjArray =>
 // PUBLIC API
 // *********************************************************************************************************************
 module.exports = {
-// Fundamental operations
-  isNullOrUndef : isNullOrUndef
-, typeOf        : typeOf
+// Type identifiers
+  typeOf        : typeOf
+, isNullOrUndef : isNullOrUndef
+, isNumeric     : isNumeric
+, isArray       : isArray
+, isMap         : isMap
 
 // Array operations suitable for use with map or reduce
 , push    : push
 , unshift : unshift
+
+// HTML element generator
+, as_html_el : as_html_el
+
+// HTML element partial functions
+, as_td      : as_td
+, as_tr      : as_tr
+, as_table   : as_table
+, as_h1      : as_h1
+, as_h2      : as_h2
+, as_pre     : as_pre
+, as_body    : as_body
+, as_html    : as_html
+, as_doc     : as_doc
 
 // Formatting parameters
 , set_depth_limit  : set_depth_limit
@@ -205,20 +236,6 @@ module.exports = {
 , timestamp_to_str : ts_to_str
 , object_to_str    : obj_to_str
 , map_to_str       : map_to_str
-
-// HTML element generator
-, as_html_el : as_html_el
-  
-// HTML element partial functions
-, as_td      : as_td
-, as_tr      : as_tr
-, as_table   : as_table
-, as_h1      : as_h1
-, as_h2      : as_h2
-, as_pre     : as_pre
-, as_body    : as_body
-, as_html    : as_html
-, as_doc     : as_doc
 
 // Transform an object into a Name/Type/Value HTML table
 , object_to_table : obj_to_table
