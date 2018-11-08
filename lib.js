@@ -196,7 +196,11 @@ var obj_to_table_int = (tab_props, ntvObjArray) =>
         as_tr([],
           [ as_td([], ntv.prop_name)
           , as_td([], ntv.prop_type)
-          , as_td([], ntv.prop_type === "Object" ? obj_to_table_int(tab_props, ntv.prop_value) : ntv.prop_value)
+          , as_td([], ntv.prop_type === "Object"
+                      ? obj_to_table_int(tab_props, ntv.prop_value)
+                      : typeOf(ntv.prop_value) === "Function"
+                        ? "Source code hidden"
+                        : ntv.prop_value)
           ].join("")
         )
       ).join("")
