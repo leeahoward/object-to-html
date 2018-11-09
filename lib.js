@@ -43,14 +43,7 @@ var set_tab_props = tp => tab_props = typeOf(tb) === "Array" ? tp : tab_props
 var depth_limit = 2
 
 var get_depth_limit = ()  => depth_limit
-var set_depth_limit = lim => {
-  if (isNumeric(lim) && lim >= 1) {
-    depth_limit = lim
-    padding = " ".repeat(depth_limit * indent_by)
-  }
-
-  return undefined
-}
+var set_depth_limit = lim => depth_limit = (isNumeric(lim) && lim >= 1) ? lim : depth_limit
 
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
