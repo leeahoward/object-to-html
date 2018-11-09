@@ -239,44 +239,52 @@ var object_to_table = (obj_arg, depth) => {
     return obj_arg
   }
   else {
-    // Start with the header row
-    acc.push(
-      as_tr( []
-           , [ as_th([bg_light_grey],"Property")
-             , as_th([bg_light_grey],"Type")
-             , as_th([bg_light_grey],"Value")
-             ].join("")
-           )
-    )
+    if (Object.keys(obj_arg).length > 0) {
+      // Start with the header row
+      acc.push(
+        as_tr( []
+            , [ as_th([bg_light_grey],"Property")
+              , as_th([bg_light_grey],"Type")
+              , as_th([bg_light_grey],"Value")
+              ].join("")
+            )
+      )
 
-    // Show the enumerable keys
-    for (var key in obj_arg) {
-      cols = []
-      // Add the Property Name and Type columns
-      cols.push(as_td([],key))
-      cols.push(as_td([],typeOf(obj_arg[key])))
+      // Show the enumerable keys
+      for (var key in obj_arg) {
+        cols = []
+        // Add the Property Name and Type columns
+        cols.push(as_td([],key))
+        cols.push(as_td([],typeOf(obj_arg[key])))
 
-      // Add the Value column
-      switch (typeOf(obj_arg[key])) {
-        case "Object":
-          cols.push(as_td([], object_to_table(obj_arg[key], depth+1)))
-          break
+        // Add the Value column
+        switch (typeOf(obj_arg[key])) {
+          case "Object":
+            cols.push(as_td([], object_to_table(obj_arg[key], depth+1)))
+            break
 
-        case "Function":
-          cols.push(as_td([],"Source code supressed"))
-          break
+          case "Function":
+            cols.push(as_td([],"Source code supressed"))
+            break
 
-        default:
-          // We assume here that this property's toString() function will return something useful...
-          cols.push(as_td([],obj_arg[key]))
+          case "Array":
+            cols.push(as_td([],obj_arg[key].join("<br>")))
+            break
+
+          default:
+            cols.push(as_td([],obj_arg[key]))
+        }
+
+        // Add this row to the accumulator
+        acc.push(as_tr([],cols.join("")))
       }
 
-      // Add this row to the accumulator
-      acc.push(as_tr([],cols.join("")))
+      // Join the accumulator array into a string then return it as a table
+      return as_table(tab_props,acc.join(""))
     }
-
-    // Join the accumulator array into a string then return it as a table
-    return as_table(tab_props,acc.join(""))
+    else {
+      return "No enumerable properties"
+    }
   }
 }
 
