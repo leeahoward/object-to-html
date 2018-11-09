@@ -41,8 +41,6 @@ var set_tab_props = tp => tab_props = typeOf(tb) === "Array" ? tp : tab_props
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // Limit the recursion depth used by obj_to_str()
 var depth_limit = 2
-var indent_by   = 2 
-var padding = " ".repeat(depth_limit * indent_by)
 
 var get_depth_limit = ()  => depth_limit
 var set_depth_limit = lim => {
@@ -54,15 +52,6 @@ var set_depth_limit = lim => {
   return undefined
 }
 
-var get_indent_by = ()    => indent_by
-var set_indent_by = chars => {
-  if (isNumeric(chars) && lim >= 1) {
-    indent_by = chars
-    padding = " ".repeat(depth_limit * indent_by)
-  }
-  
-  return undefined
-}
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // Timestamp to string
@@ -102,6 +91,7 @@ var as_html_el = tag_name =>
   (propsArray, val) =>
     `${make_tag(tag_name, propsArray)}${isEmptyElement(tag_name) || isNullOrUndef(val) ? "" : val}</${tag_name}>`
 
+// Partial functions for generating specific HTML elements
 var as_table = as_html_el("table")
 var as_tr    = as_html_el("tr")
 var as_td    = as_html_el("td")
@@ -170,27 +160,31 @@ var evt_to_table = evt =>
   )
 
 
-var value_to_table_cell = (val, depth) =>
+var value_to_str = (val, depth) =>
   (valType =>
-    as_td( []
-         , valType === "Object"
-           ? object_to_table(val, depth+1)
-           : valType === "Function"
-             ? "Source code supressed"
-             : valType === "Array"
-               ? (val.length > 0 ? val.join("<br>") : "[]")
-               : valType === "Map"
-                 ? map_to_str(val)
-                 : val
-         )
+    depth > depth_limit
+    ? "..."
+    : valType === "Object"
+      ? object_to_table(val, depth+1)
+      : valType === "Function"
+        ? "Source code supressed"
+        : valType === "Array"
+          ? (val.length > 0
+            ? val.map(el => value_to_str(el, depth+1)).join("<br>")
+            : "[]")
+          : valType === "Map"
+            ? map_to_str(val)
+            : val
   )
   (typeOf(val))
+
+var value_to_table_cell = (val, depth) => as_td([], value_to_str(val, depth))
 
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // Object to table
 // This function avoids the cases where a simple call to JSON.stringify() would explode with either "Callstack size
-// exceeded" or "TypeError: Converting circular structure to JSON" errors - ss happens with an HTTP request object
+// exceeded" or "TypeError: Converting circular structure to JSON" errors - as happens with an HTTP request object
 var object_to_table = (obj_arg, depth) => {
   var acc  = []
   var cols
@@ -277,8 +271,6 @@ module.exports = {
 // Formatting parameters
 , set_depth_limit  : set_depth_limit
 , get_depth_limit  : get_depth_limit
-, set_indent_by    : set_indent_by
-, get_indent_by    : get_indent_by
 , set_tab_props    : set_tab_props
 , get_tab_props    : get_tab_props
 
