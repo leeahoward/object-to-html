@@ -13,7 +13,10 @@
 // *********************************************************************************************************************
 // Type checking operations
 var typeOf        = x => Object.prototype.toString.apply(x).slice(8).slice(0, -1)
-var isNullOrUndef = x => x === undefined || x === null
+var isNull        = x => x === null
+var isUndefined   = x => x === undefined
+var isNullOrUndef = x => isNull(x) || isUndefined(x)
+
 var isNumeric     = x => typeOf(x) === "Number"
 var isArray       = x => typeOf(x) === "Array"
 var isMap         = x => typeOf(x) === "Map"
@@ -67,8 +70,8 @@ var ts_to_str = ts_arg => isNullOrUndef(ts_arg) ? ts_arg : (new Date(ts_arg)).to
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // Object to string
-// This function is needed in situations where JSON.stringify() explodes with a "Callstack size exceeded" error due to
-// the object containing circular references
+// This function the cases where a simple call to JSON.stringify() would explode with a "Callstack size exceeded" error
+// due to the object containing circular references
 var obj_to_str = (obj_arg, depth) => {
   // Set current recursion depth to 0 if the argument is missing
   depth = depth || 0
@@ -108,6 +111,113 @@ var obj_to_str = (obj_arg, depth) => {
     return (acc.length > 0) ? `{\n${pad}  ${acc.join(`\n${pad}, `)}\n${pad}}` : "{}"
   }
 }
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+// Transform a Map object into a printable form
+var map_to_str = map_arg => {
+  if (isMap(map_arg)) {
+    if (isNullOrUndef(map_arg)) {
+      return map_arg
+    }
+    else {
+      var acc = []
+      var iter = map_arg[Symbol.iterator]()
+  
+      for (let el of iter) {
+        acc.push(`["${el[0]}", ${el[1]}]`)
+      }
+  
+      return acc.join(", ")
+    }
+  }
+  else  {
+    return "Not a Map object"
+  }
+}
+
+// *********************************************************************************************************************
+// Generate HTML elements
+const bg_light_grey = "style=\"background-color:#DDD;\""
+
+const emptyElements = ['area', 'base', 'basefont', 'br', 'col', 'frame', 'hr'
+, 'img', 'input', 'isindex', 'link', 'meta', 'param', 'command', 'keygen', 'source']
+
+var isEmptyElement = tag_name => emptyElements.indexOf(tag_name) >= 0
+
+var make_tag = (tag_name, props_array) =>
+  `<${tag_name}${(isNullOrUndef(props_array) || props_array.length === 0 ? "" : " " + props_array.join(" "))}>`
+
+var as_html_el = tag_name =>
+  (propsArray, val) =>
+    `${make_tag(tag_name, propsArray)}${isEmptyElement(tag_name) || isNullOrUndef(val) ? "" : val}</${tag_name}>`
+
+var as_table = as_html_el("table")
+var as_tr    = as_html_el("tr")
+var as_td    = as_html_el("td")
+var as_th    = as_html_el("th")
+var as_h1    = as_html_el("h1")
+var as_h2    = as_html_el("h2")
+var as_pre   = as_html_el("pre")
+var as_body  = as_html_el("body")
+var as_html  = as_html_el("html")
+
+
+// *********************************************************************************************************************
+// Transform an Event object to an HTML table
+var evt_to_table = evt =>
+  as_table(tab_props,
+    // Header Row
+    [ as_tr([], [ as_th([ bg_light_grey],"Property")
+                , as_th([bg_light_grey],"Type")
+                , as_th([bg_light_grey],"Value")
+                ].join(""))
+
+    // Event object properties
+    , as_tr([], [ as_td([],"eventType")
+                , as_td([], typeOf(evt.eventType))
+                , as_td([], evt.eventType)
+                ].join(""))
+    , as_tr([], [ as_td([],"eventTypeVersion")
+                , as_td([], typeOf(evt.eventTypeVersion))
+                , as_td([], evt.eventTypeVersion)].join(""))
+    , as_tr([], [ as_td([],"cloudEventsVersion")
+                , as_td([], typeOf(evt.cloudEventsVersion))
+                , as_td([], evt.cloudEventsVersion)].join(""))
+    , as_tr([], [ as_td([],"source")
+                , as_td([], typeOf(evt.source))
+                , as_td([], evt.source)
+                ].join(""))
+    , as_tr([], [ as_td([],"eventID")
+                , as_td([], typeOf(evt.eventID))
+                , as_td([], evt.eventID)
+                ].join(""))
+    , as_tr([], [ as_td([],"eventTime")
+                , as_td([], typeOf(evt.eventTime))
+                , as_td([], ts_to_str(evt.eventTime))
+                ].join(""))
+    , as_tr([], [ as_td([],"schemaURL")
+                , as_td([], typeOf(evt.schemaURL))
+                , as_td([], evt.schemaURL)
+                ].join(""))
+    , as_tr([], [ as_td([],"contentType")
+                , as_td([], typeOf(evt.contentType))
+                , as_td([], evt.contentType)
+                ].join(""))
+    , as_tr([], [ as_td([],"extensions.request")
+                , as_td([], typeOf(evt.extensions.request))
+                , as_td([], object_to_table(evt.extensions.request))
+                ].join(""))
+    , as_tr([], [ as_td([],"extensions.response")
+                , as_td([], typeOf(evt.extensions.response))
+                , as_td([], object_to_table(evt.extensions.response))
+                ].join(""))
+    , as_tr([], [ as_td([],"data")
+                , as_td([], typeOf(evt.data))
+                , as_td([], object_to_table(evt.data))
+                ].join(""))
+    ].join("")
+  )
+
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // Object to table
@@ -156,10 +266,6 @@ var object_to_table = (obj_arg, depth) => {
           cols.push(as_td([],"Source code supressed"))
           break
 
-        // case "Array":
-        //   acc.push()
-        //   break
-
         default:
           // We assume here that this property's toString() function will return something useful...
           cols.push(as_td([],obj_arg[key]))
@@ -174,166 +280,6 @@ var object_to_table = (obj_arg, depth) => {
   }
 }
 
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-// Transform a Map object into a printable form
-var map_to_str = map_arg => {
-  if (isMap(map_arg)) {
-    if (isNullOrUndef(map_arg)) {
-      return map_arg
-    }
-    else {
-      var acc = []
-      var iter = map_arg[Symbol.iterator]()
-  
-      for (let el of iter) {
-        acc.push(`["${el[0]}", ${el[1]}]`)
-      }
-  
-      return acc.join(", ")
-    }
-  }
-  else  {
-    return "Not a Map object"
-  }
-}
-
-// *********************************************************************************************************************
-// Recursively unpack an object into an array of arrays suitable for map or reduce
-// "ntv" = Name/Type/Value
-var make_ntv_obj = (n, t, v) => ({prop_name:n, prop_type:t, prop_value:v})
-
-var unpack_obj = (obj, acc) =>
-  ((keys, vals) =>
-     keys.reduce((acc, key, idx) =>
-       push(acc
-       , make_ntv_obj(key
-         , typeOf(vals[idx])
-         , (typeOf(vals[idx]) === "Object" ? unpack_obj(vals[idx],[]) : vals[idx])
-         )
-       )
-     , acc))
-  ( isNullOrUndef(obj) ? [] : Object.keys(obj)
-  , isNullOrUndef(obj) ? [] : Object.values(obj))
-
-
-// *********************************************************************************************************************
-// Generate HTML elements
-const bg_light_grey = "style=\"background-color:#DDD;\""
-
-const emptyElements = ['area', 'base', 'basefont', 'br', 'col', 'frame', 'hr'
-, 'img', 'input', 'isindex', 'link', 'meta', 'param', 'command', 'keygen', 'source']
-
-var isEmptyElement = tag_name => emptyElements.indexOf(tag_name) >= 0
-
-var make_tag = (tag_name, props_array) =>
-  `<${tag_name}${(isNullOrUndef(props_array) || props_array.length === 0 ? "" : " " + props_array.join(" "))}>`
-
-var as_html_el = tag_name =>
-  (propsArray, val) =>
-    `${make_tag(tag_name, propsArray)}${isEmptyElement(tag_name) || isNullOrUndef(val) ? "" : val}</${tag_name}>`
-
-var as_table = as_html_el("table")
-var as_tr    = as_html_el("tr")
-var as_td    = as_html_el("td")
-var as_th    = as_html_el("th")
-var as_h1    = as_html_el("h1")
-var as_h2    = as_html_el("h2")
-var as_pre   = as_html_el("pre")
-var as_body  = as_html_el("body")
-var as_html  = as_html_el("html")
-
-// Transform and object in a Name/Type/Value table
-// This function only works on objects that can be JSON.stringified (I.E. objects that do not contain circular
-// references)
-// If you omit the table properties array argument and pass the object argument as the only parameter, then obj_arg will
-// be undefined and tab_props will contain the object to be transformed.
-// Therefore, assume an empty array for the tab_props arg
-var obj_to_table = (tab_props, obj_arg) =>
-  isNullOrUndef(obj_arg)
-  ? obj_to_table_int([], unpack_obj(tab_props,[]))
-  : obj_to_table_int(tab_props, unpack_obj(obj_arg,[]))
-
-
-var obj_to_table_int = (tab_props, ntvObjArray) =>
-  as_table(tab_props,
-    // Start with a header row
-    [ as_tr( []
-           , [ as_th([bg_light_grey],"Property")
-             , as_th([bg_light_grey],"Type")
-             , as_th([bg_light_grey],"Value")
-             ].join("")
-           )
-    // Each element from the ntv array becomes a table row
-    , ntvObjArray.map(ntv =>
-        as_tr([],
-          [ as_td([], ntv.prop_name)
-          , as_td([], ntv.prop_type)
-          , as_td([], ntv.prop_type === "Object"
-                      ? obj_to_table_int(tab_props, ntv.prop_value)
-                      : typeOf(ntv.prop_value) === "Function"
-                        ? "Source code hidden"
-                        : ntv.prop_value)
-          ].join("")
-        )
-      ).join("")
-    ].join("")
-  )
-
-
-var evt_to_table = evt =>
-  as_table(tab_props,
-    // Header Row
-    [ as_tr([], [ as_th([ bg_light_grey],"Property")
-                , as_th([bg_light_grey],"Type")
-                , as_th([bg_light_grey],"Value")
-                ].join(""))
-
-    // Event object properties
-    , as_tr([], [ as_td([],"eventType")
-                , as_td([], typeOf(evt.eventType))
-                , as_td([], evt.eventType)
-                ].join(""))
-    , as_tr([], [ as_td([],"eventTypeVersion")
-                , as_td([], typeOf(evt.eventTypeVersion))
-                , as_td([], evt.eventTypeVersion)].join(""))
-    , as_tr([], [ as_td([],"cloudEventsVersion")
-                , as_td([], typeOf(evt.cloudEventsVersion))
-                , as_td([], evt.cloudEventsVersion)].join(""))
-    , as_tr([], [ as_td([],"source")
-                , as_td([], typeOf(evt.source))
-                , as_td([], evt.source)
-                ].join(""))
-    , as_tr([], [ as_td([],"eventID")
-                , as_td([], typeOf(evt.eventID))
-                , as_td([], evt.eventID)
-                ].join(""))
-    , as_tr([], [ as_td([],"eventTime")
-                , as_td([], typeOf(evt.eventTime))
-                , as_td([], ts_to_str(evt.eventTime))
-                ].join(""))
-    , as_tr([], [ as_td([],"schemaURL")
-                , as_td([], typeOf(evt.schemaURL))
-                , as_td([], evt.schemaURL)
-                ].join(""))
-    , as_tr([], [ as_td([],"contentType")
-                , as_td([], typeOf(evt.contentType))
-                , as_td([], evt.contentType)
-                ].join(""))
-    , as_tr([], [ as_td([],"extensions.request")
-                , as_td([], typeOf(evt.extensions.request))
-                , as_td([], as_pre([], object_to_table(evt.extensions.request)))
-                ].join(""))
-    , as_tr([], [ as_td([],"extensions.response")
-                , as_td([], typeOf(evt.extensions.response))
-                , as_td([], as_pre([], object_to_table(evt.extensions.response)))
-                ].join(""))
-    , as_tr([], [ as_td([],"data")
-                , as_td([], typeOf(evt.data))
-                , as_td([], as_pre([], object_to_table(evt.data)))
-                ].join(""))
-    ].join("")
-  )
-
 
 // *********************************************************************************************************************
 // PUBLIC API
@@ -341,6 +287,8 @@ var evt_to_table = evt =>
 module.exports = {
 // Type identifiers
   typeOf        : typeOf
+, isNull        : isNull
+, isUndefined   : isUndefined
 , isNullOrUndef : isNullOrUndef
 , isNumeric     : isNumeric
 , isArray       : isArray
