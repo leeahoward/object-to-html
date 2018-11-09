@@ -111,11 +111,11 @@ var evt_to_table = (evt, depth) => {
                   ].join(""))
 
       // Event object properties
-      , Object.keys(evt).map((key, idx, arr) =>
+      , Object.keys(evt).map(key =>
           as_tr( []
               , [ as_td([], key)
-                , as_td([], typeOf(arr[key]))
-                , as_td([], value_to_str(arr[key], depth))
+                , as_td([], typeOf(evt[key]))
+                , as_td([], value_to_str(evt[key], depth))
                 ].join("")
               )
         ).join("")
