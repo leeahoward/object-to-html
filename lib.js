@@ -98,8 +98,29 @@ var as_html  = as_html_el("html")
 
 // *********************************************************************************************************************
 // Transform an Event object to an HTML table
-var evt_to_table = evt => {
+var evt_to_table = (evt, depth) => {
+  depth = depth || 0
+
   console.log(`Event properties = [${Object.keys(evt).join(", ")}]`)
+
+  return as_table(tab_props
+    // Header Row
+    , [ as_tr([], [ as_th([bg_light_grey],"Property")
+                  , as_th([bg_light_grey],"Type")
+                  , as_th([bg_light_grey],"Value")
+                  ].join(""))
+
+      // Event object properties
+      , Object.keys(evt).map((key, idx, arr) =>
+          as_tr( []
+              , [ as_td([], key)
+                , as_td([], typeOf(arr[key]))
+                , as_td([], value_to_str(arr[key], depth))
+                ].join("")
+              )
+        ).join("")
+      ].join("")
+  )
 
   return as_table(tab_props,
     // Header Row
