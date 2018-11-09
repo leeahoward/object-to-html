@@ -329,7 +329,7 @@ var evt_to_table = evt =>
                 ].join(""))
     , as_tr([], [ as_td([],"data")
                 , as_td([], typeOf(evt.data))
-                , as_td([], as_pre([], object_to_tab(evt.data)))
+                , as_td([], as_pre([], object_to_table(evt.data)))
                 ].join(""))
     ].join("")
   )
