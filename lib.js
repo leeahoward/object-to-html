@@ -68,6 +68,27 @@ var map_to_str = map_arg => {
   }
 }
 
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+// Generic datatype to string
+var value_to_str = (val, depth) =>
+  (valType =>
+    depth > depth_limit
+    ? "..."
+    : valType === "Object"
+      ? object_to_table(val, depth+1)
+      : valType === "Function"
+        ? "Source code supressed"
+        : valType === "Array"
+          ? (val.length > 0
+            ? val.map(el => value_to_str(el, depth+1)).join("<br>")
+            : "[]")
+          : valType === "Map"
+            ? map_to_str(val)
+            : val
+  )
+  (typeOf(val))
+
+
 // *********************************************************************************************************************
 // Generate HTML elements
 const bg_light_grey = "style=\"background-color:#DDD;\""
@@ -98,101 +119,28 @@ var as_html  = as_html_el("html")
 
 // *********************************************************************************************************************
 // Transform an Event object to an HTML table
-var evt_to_table = (evt, depth) => {
-  depth = depth || 0
+var make_table_hdr_row = () =>
+  as_tr([], [as_th([bg_light_grey],"Property"), as_th([bg_light_grey],"Type"), as_th([bg_light_grey],"Value")].join(""))
 
-  console.log(`Event properties = [${Object.keys(evt).join(", ")}]`)
+var evt_to_table = (evt, depth) =>
+  (current_depth =>
+    as_table(tab_props
+      // Header Row
+      , [ make_table_hdr_row()
 
-  return as_table(tab_props
-    // Header Row
-    , [ as_tr([], [ as_th([bg_light_grey],"Property")
-                  , as_th([bg_light_grey],"Type")
-                  , as_th([bg_light_grey],"Value")
-                  ].join(""))
-
-      // Event object properties
-      , Object.keys(evt).map(key =>
-          as_tr( []
-              , [ as_td([], key)
-                , as_td([], typeOf(evt[key]))
-                , as_td([], value_to_str(evt[key], depth))
-                ].join("")
-              )
-        ).join("")
-      ].join("")
+        // Event object properties
+        , Object.keys(evt).map(key =>
+            as_tr( []
+                , [ as_td([], key)
+                  , as_td([], typeOf(evt[key]))
+                  , as_td([], value_to_str(evt[key], current_depth))
+                  ].join("")
+                )
+          ).join("")
+        ].join("")
+    )
   )
-
-  return as_table(tab_props,
-    // Header Row
-    [ as_tr([], [ as_th([ bg_light_grey],"Property")
-                , as_th([bg_light_grey],"Type")
-                , as_th([bg_light_grey],"Value")
-                ].join(""))
-
-    // Event object properties
-    , as_tr([], [ as_td([],"eventType")
-                , as_td([], typeOf(evt.eventType))
-                , as_td([], evt.eventType)
-                ].join(""))
-    , as_tr([], [ as_td([],"eventTypeVersion")
-                , as_td([], typeOf(evt.eventTypeVersion))
-                , as_td([], evt.eventTypeVersion)].join(""))
-    , as_tr([], [ as_td([],"cloudEventsVersion")
-                , as_td([], typeOf(evt.cloudEventsVersion))
-                , as_td([], evt.cloudEventsVersion)].join(""))
-    , as_tr([], [ as_td([],"source")
-                , as_td([], typeOf(evt.source))
-                , as_td([], evt.source)
-                ].join(""))
-    , as_tr([], [ as_td([],"eventID")
-                , as_td([], typeOf(evt.eventID))
-                , as_td([], evt.eventID)
-                ].join(""))
-    , as_tr([], [ as_td([],"eventTime")
-                , as_td([], typeOf(evt.eventTime))
-                , as_td([], ts_to_str(evt.eventTime))
-                ].join(""))
-    , as_tr([], [ as_td([],"schemaURL")
-                , as_td([], typeOf(evt.schemaURL))
-                , as_td([], evt.schemaURL)
-                ].join(""))
-    , as_tr([], [ as_td([],"contentType")
-                , as_td([], typeOf(evt.contentType))
-                , as_td([], evt.contentType)
-                ].join(""))
-    , as_tr([], [ as_td([],"extensions.request")
-                , as_td([], typeOf(evt.extensions.request))
-                , as_td([], object_to_table(evt.extensions.request))
-                ].join(""))
-    , as_tr([], [ as_td([],"extensions.response")
-                , as_td([], typeOf(evt.extensions.response))
-                , as_td([], object_to_table(evt.extensions.response))
-                ].join(""))
-    , as_tr([], [ as_td([],"data")
-                , as_td([], typeOf(evt.data))
-                , as_td([], object_to_table(evt.data))
-                ].join(""))
-    ].join("")
-  )
-}
-
-var value_to_str = (val, depth) =>
-  (valType =>
-    depth > depth_limit
-    ? "..."
-    : valType === "Object"
-      ? object_to_table(val, depth+1)
-      : valType === "Function"
-        ? "Source code supressed"
-        : valType === "Array"
-          ? (val.length > 0
-            ? val.map(el => value_to_str(el, depth+1)).join("<br>")
-            : "[]")
-          : valType === "Map"
-            ? map_to_str(val)
-            : val
-  )
-  (typeOf(val))
+  (depth || 0)
 
 var value_to_table_cell = (val, depth) => as_td([], value_to_str(val, depth))
 
@@ -219,14 +167,7 @@ var object_to_table = (obj_arg, depth) => {
   else {
     if (Object.keys(obj_arg).length > 0) {
       // Start with the header row
-      acc.push(
-        as_tr( []
-            , [ as_th([bg_light_grey],"Property")
-              , as_th([bg_light_grey],"Type")
-              , as_th([bg_light_grey],"Value")
-              ].join("")
-            )
-      )
+      acc.push(make_table_hdr_row())
 
       // Show the enumerable keys
       for (var key in obj_arg) {
