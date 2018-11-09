@@ -162,7 +162,7 @@ var object_to_table = (obj_arg, depth) => {
 
         default:
           // We assume here that this property's toString() function will return something useful...
-          acc.push(as_td([],obj_arg[key]))
+          cols.push(as_td([],obj_arg[key]))
       }
 
       // Add this row to the accumulator
