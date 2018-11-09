@@ -144,7 +144,7 @@ var object_to_table = (obj_arg, depth) => {
       cols = []
       // Add the Property Name and Type columns
       cols.push(as_td([],key))
-      cols.push(as_td([],typeOf(obj_arg[keys])))
+      cols.push(as_td([],typeOf(obj_arg[key])))
 
       // Add the Value column
       switch (typeOf(obj_arg[key])) {
