@@ -69,7 +69,7 @@ var map_to_str = map_arg => {
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-// Generic datatype to string
+// Transform a generic datatype to a string
 var value_to_str = (val, depth) =>
   (valType =>
     depth > depth_limit
@@ -101,6 +101,11 @@ var isEmptyElement = tag_name => emptyElements.indexOf(tag_name) >= 0
 var make_tag = (tag_name, props_array) =>
   `<${tag_name}${(isNullOrUndef(props_array) || props_array.length === 0 ? "" : " " + props_array.join(" "))}>`
 
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+// Generic HTML element generator
+// When called with only the element's tag name, it returns a partial function requiring an array of the elements
+// property values, followed by the element's content in a form that is either a string, or where calling that object's
+// toString() function returns something useful
 var as_html_el = tag_name =>
   (propsArray, val) =>
     `${make_tag(tag_name, propsArray)}${isEmptyElement(tag_name) || isNullOrUndef(val) ? "" : val}</${tag_name}>`
@@ -122,28 +127,7 @@ var as_html  = as_html_el("html")
 var make_table_hdr_row = () =>
   as_tr([], [as_th([bg_light_grey],"Property"), as_th([bg_light_grey],"Type"), as_th([bg_light_grey],"Value")].join(""))
 
-var evt_to_table = (evt, depth) =>
-  (current_depth =>
-    as_table(tab_props
-      // Header Row
-      , [ make_table_hdr_row()
-
-        // Event object properties
-        , Object.keys(evt).map(key =>
-            as_tr( []
-                , [ as_td([], key)
-                  , as_td([], typeOf(evt[key]))
-                  , as_td([], value_to_str(evt[key], current_depth))
-                  ].join("")
-                )
-          ).join("")
-        ].join("")
-    )
-  )
-  (depth || 0)
-
 var value_to_table_cell = (val, depth) => as_td([], value_to_str(val, depth))
-
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // Object to table
@@ -208,10 +192,7 @@ module.exports = {
 , push    : push
 , unshift : unshift
 
-// Generic HTML element generator.
-// When called with only the element's tag name, it returns a partial function requiring an array of the elements
-// property values, followed by the element's content in a form that is either a string, or where calling that object's
-// toString() function returns something useful
+// Generic HTML element generator
 , as_html_el : as_html_el
 
 // HTML element partial functions
@@ -235,6 +216,5 @@ module.exports = {
 , timestamp_to_str : ts_to_str
 
 // Transform an object into a Name/Type/Value HTML table
-, event_to_table  : evt_to_table
 , object_to_table : object_to_table
 }
