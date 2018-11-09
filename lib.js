@@ -39,7 +39,7 @@ var set_tab_props = tp => tab_props = typeOf(tb) === "Array" ? tp : tab_props
 // Transform various datatypes to strings
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-// Limit the recursion depth used by obj_to_str()
+// Limit the recursion depth used by object_to_table() and value_to_str()
 var depth_limit = 2
 
 var get_depth_limit = ()  => depth_limit
