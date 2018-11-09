@@ -69,69 +69,20 @@ var set_indent_by = chars => {
 var ts_to_str = ts_arg => isNullOrUndef(ts_arg) ? ts_arg : (new Date(ts_arg)).toLocaleString()
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-// Object to string
-// This function the cases where a simple call to JSON.stringify() would explode with a "Callstack size exceeded" error
-// due to the object containing circular references
-var obj_to_str = (obj_arg, depth) => {
-  // Set current recursion depth to 0 if the argument is missing
-  depth = depth || 0
-
-  if (depth === depth_limit) {
-    return "{...}"
-  }
-
-  if (isNullOrUndef(obj_arg)) {
-    return obj_arg
+// Transform a Map object into a printable form
+var map_to_str = map_arg => {
+  if (isNullOrUndef(map_arg)) {
+    return map_arg
   }
   else {
     var acc = []
-    var pad = padding.slice(0,depth * indent_by)
+    var iter = map_arg[Symbol.iterator]()
 
-    // Show only the enumerable keys
-    for (var key in obj_arg) {
-      switch (typeOf(obj_arg[key])) {
-        case "Object":
-          acc.push(`"${key}": ${obj_to_str(obj_arg[key], depth+1)}`)
-          break
-
-        case "Function":
-          acc.push(`"${key}": Function`)
-          break
-
-        case "Array":
-          acc.push(`"${key}": Array`)
-          break
-
-        default:
-          acc.push(`"${key}": ${obj_arg[key]}`)
-      }
+    for (let el of iter) {
+      acc.push(`["${el[0]}", ${el[1]}]`)
     }
 
-    // Join the accumulator array into a string then top and tail it with curly braces
-    return (acc.length > 0) ? `{\n${pad}  ${acc.join(`\n${pad}, `)}\n${pad}}` : "{}"
-  }
-}
-
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-// Transform a Map object into a printable form
-var map_to_str = map_arg => {
-  if (isMap(map_arg)) {
-    if (isNullOrUndef(map_arg)) {
-      return map_arg
-    }
-    else {
-      var acc = []
-      var iter = map_arg[Symbol.iterator]()
-  
-      for (let el of iter) {
-        acc.push(`["${el[0]}", ${el[1]}]`)
-      }
-  
-      return acc.join(", ")
-    }
-  }
-  else  {
-    return "Not a Map object"
+    return acc.join(", ")
   }
 }
 
@@ -219,10 +170,27 @@ var evt_to_table = evt =>
   )
 
 
+var value_to_table_cell = (val, depth) =>
+  (valType =>
+    as_td( []
+         , valType === "Object"
+           ? object_to_table(val, depth+1)
+           : valType === "Function"
+             ? "Source code supressed"
+             : valType === "Array"
+               ? (val.length > 0 ? val.join("<br>") : "[]")
+               : valType === "Map"
+                 ? map_to_str(val)
+                 : val
+         )
+  )
+  (typeOf(val))
+
+
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // Object to table
-// This function avoids the cases where a simple call to JSON.stringify() would explode with a "Callstack size exceeded"
-// error due to the object containing circular references - as happens with the standard HTTP request object
+// This function avoids the cases where a simple call to JSON.stringify() would explode with either "Callstack size
+// exceeded" or "TypeError: Converting circular structure to JSON" errors - ss happens with an HTTP request object
 var object_to_table = (obj_arg, depth) => {
   var acc  = []
   var cols
@@ -253,27 +221,10 @@ var object_to_table = (obj_arg, depth) => {
       // Show the enumerable keys
       for (var key in obj_arg) {
         cols = []
-        // Add the Property Name and Type columns
+        // Add the Property Name, Type and Value columns
         cols.push(as_td([],key))
         cols.push(as_td([],typeOf(obj_arg[key])))
-
-        // Add the Value column
-        switch (typeOf(obj_arg[key])) {
-          case "Object":
-            cols.push(as_td([], object_to_table(obj_arg[key], depth+1)))
-            break
-
-          case "Function":
-            cols.push(as_td([],"Source code supressed"))
-            break
-
-          case "Array":
-            cols.push(as_td([],obj_arg[key].length > 0 ? obj_arg[key].join("<br>") : "[]"))
-            break
-
-          default:
-            cols.push(as_td([],obj_arg[key]))
-        }
+        cols.push(value_to_table_cell(obj_arg[key], depth))
 
         // Add this row to the accumulator
         acc.push(as_tr([],cols.join("")))
@@ -333,8 +284,6 @@ module.exports = {
 
 // String formatting functions
 , timestamp_to_str : ts_to_str
-, object_to_str    : obj_to_str
-, map_to_str       : map_to_str
 
 // Transform an object into a Name/Type/Value HTML table
 , event_to_table  : evt_to_table
