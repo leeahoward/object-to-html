@@ -26,6 +26,13 @@ var unshift = (arr, newEl) => (_ => arr)(arr.unshift(newEl))
 
 
 // *********************************************************************************************************************
+// Formatting values for the HTML output table
+var tab_props = ["border=1", "cellpadding=3", "cellspacing=0"]
+
+var get_tab_props = () => tab_props
+var set_tab_props = tp => tab_props = typeOf(tb) === "Array" ? tp : tab_props
+
+// *********************************************************************************************************************
 // Transform various datatypes to strings
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -99,6 +106,71 @@ var obj_to_str = (obj_arg, depth) => {
 
     // Join the accumulator array into a string then top and tail it with curly braces
     return (acc.length > 0) ? `{\n${pad}  ${acc.join(`\n${pad}, `)}\n${pad}}` : "{}"
+  }
+}
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+// Object to table
+// This function avoids the cases where a simple call to JSON.stringify() would explode with a "Callstack size exceeded"
+// error due to the object containing circular references - as happens with the standard HTTP request object
+var object_to_table = (obj_arg, depth) => {
+  var acc  = []
+  var cols
+
+  // Set current recursion depth to 0 if the argument is missing
+  depth = depth || 0
+
+  // Bail out if the recursion depth limit has been hit
+  if (depth === depth_limit) {
+    return "{...}"
+  }
+
+  if (isNullOrUndef(obj_arg)) {
+    return obj_arg
+  }
+  else {
+    // Start with the header row
+    acc.push(
+      as_tr( []
+           , [ as_th([bg_light_grey],"Property")
+             , as_th([bg_light_grey],"Type")
+             , as_th([bg_light_grey],"Value")
+             ].join("")
+           )
+    )
+
+    // Show the enumerable keys
+    for (var key in obj_arg) {
+      cols = []
+      // Add the Property Name and Type columns
+      cols.push(as_td([],key))
+      cols.push(as_td([],typeOf(obj_arg[keys])))
+
+      // Add the Value column
+      switch (typeOf(obj_arg[key])) {
+        case "Object":
+          cols.push(as_td([], object_to_table(obj_arg[key], depth+1)))
+          break
+
+        case "Function":
+          cols.push(as_td([],"Source code supressed"))
+          break
+
+        // case "Array":
+        //   acc.push()
+        //   break
+
+        default:
+          // We assume here that this property's toString() function will return something useful...
+          acc.push(as_td([],obj_arg[key]))
+      }
+
+      // Add this row to the accumulator
+      acc.push(as_tr([],cols.join("")))
+    }
+
+    // Join the accumulator array into a string then return it as a table
+    return as_table(tab_props,acc.join(""))
   }
 }
 
@@ -265,6 +337,8 @@ module.exports = {
 , get_depth_limit  : get_depth_limit
 , set_indent_by    : set_indent_by
 , get_indent_by    : get_indent_by
+, set_tab_props    : set_tab_props
+, get_tab_props    : get_tab_props
 
 // String formatting functions
 , timestamp_to_str : ts_to_str
@@ -273,5 +347,5 @@ module.exports = {
 
 // Transform an object into a Name/Type/Value HTML table
 , event_to_table  : evt_to_table
-, object_to_table : obj_to_table
+, object_to_table : object_to_table
 }
