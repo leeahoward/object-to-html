@@ -268,7 +268,7 @@ var object_to_table = (obj_arg, depth) => {
             break
 
           case "Array":
-            cols.push(as_td([],obj_arg[key].join("<br>")))
+            cols.push(as_td([],obj_arg[key].length > 0 ? obj_arg[key].join("<br>") : "[]"))
             break
 
           default:
