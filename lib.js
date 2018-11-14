@@ -93,6 +93,16 @@ var value_to_str = (val, depth) =>
 const emptyElements = ['area', 'base', 'basefont', 'br', 'col', 'frame', 'hr'
 , 'img', 'input', 'isindex', 'link', 'meta', 'param', 'command', 'keygen', 'source']
 
+var content_table_style = [
+   "table { float:left; border-collapse: collapse; }"
+ , "table, th, td { border: 1px solid grey; }"
+ , "th, td { padding: 3px; }"
+ , "th { background-color:#DDD; }"
+ , ".arrow-down { float: left; }"
+ , ".arrow-right { float: left; }"
+ , ".content { display: table-row; }"
+].join(" ")
+
 var isEmptyElement = tag_name => emptyElements.indexOf(tag_name) >= 0
 
 var make_tag = (tag_name, props_array) =>
@@ -109,6 +119,7 @@ var as_html_el = tag_name =>
 
 // Partial functions for generating specific HTML elements
 var as_div    = as_html_el("div")
+var as_style  = as_html_el("style")
 var as_img    = as_html_el("img")
 var as_button = as_html_el("button")
 var as_table  = as_html_el("table")
@@ -124,7 +135,7 @@ var as_html   = as_html_el("html")
 
 
 // *********************************************************************************************************************
-// Transform an Event object to an HTML table
+// Generate a header row for an NTV (Name, Type, Value) table
 var make_table_hdr_row = () =>
   as_tr([], [as_th([],"Property"), as_th([],"Type"), as_th([],"Value")].join(""))
 
@@ -186,8 +197,12 @@ var object_to_table = (obj_arg, depth) => {
 // *********************************************************************************************************************
 // Create a content div containing a header and an object table
 var create_content_table = (hdr, obj) =>
-  as_div(["class='content'", `id='${obj}-content'`],
-    [ as_h2([], hdr)
+  as_div([
+      "class='content'"
+    , `id='${typeOf(obj)}-content'`
+    ],
+    [ as_style([], content_table_style)
+    , as_h2([], hdr)
     , object_to_table(obj).content
     ].join("")
   )
