@@ -201,12 +201,23 @@ var create_content_table = (hdr, obj) =>
       "class='content'"
     , `id='${typeOf(obj)}-content'`
     ],
-    [ as_style([], content_table_style)
-    , as_h2([], hdr)
+    [ as_h2([], hdr)
     , object_to_table(obj).content
     ].join("")
   )
-
+// Argument nvArray must be an array in which each element is an object containing:
+// { 
+//   title : "<Whatever title you want to describe this object>"
+// , value : the_object_itself
+// }
+var create_content = nvArray => 
+  !isNullOrUndef(nvArray) && nvArray.length > 0
+  ? as_div([]
+    , [ as_style([], content_table_style)
+      , nvArray.map(el => create_content_table(el.title, el.value)).join("")
+      ].join("")
+    )
+  : ""
 
 // *********************************************************************************************************************
 // PUBLIC API
@@ -253,4 +264,7 @@ module.exports = {
 
 // Create a content DIV containing a header and an object content table
 , create_content_table : create_content_table
+
+// Wrap all supplied objects and their titles in a DIV with a style sheet
+, create_content : create_content
 }
