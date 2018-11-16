@@ -1,7 +1,7 @@
 {
   "name": "basic-formatting-utils",
-  "description": "Various helpful JavaScript utilities",
-  "version": "1.1.20",
+  "description": "JavaScript utilities to display a server-side object as an HTML table with collapsible nested content",
+  "version": "1.2.0",
   "author": {
     "name": "Chris Whealy",
     "email": "chris@whealy.com",
@@ -9,6 +9,7 @@
   },
   "keywords": [
     "utilities"
+  , "object formatting"
   ],
   "repository": "github:ChrisWhealy/basic-utils",
   "dependencies": {},
