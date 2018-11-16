@@ -379,7 +379,7 @@ var collapse_button_div = (obj_name, obj_type) =>
   )
 
 
-fs.writeFileSync("test.html", create_content([{title:"NodeJS Process", value:process}]))
+//fs.writeFileSync("test.html", create_content([{title:"NodeJS Process", value:process}]))
 
 
 
