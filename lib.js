@@ -345,7 +345,7 @@ var object_to_table = (obj_arg, obj_name, depth) => {
 var create_content_table = (hdr, obj) =>
   (obj_name =>
     as_div(
-      ["class='bfu-content'", `id='${obj_name}-content'`],
+      ["class='bfu-content'"],
       [ as_h2(["class='bfu-header2'"], hdr)
       , object_to_table(obj, obj_name)
       ].join("")
