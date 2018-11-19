@@ -351,7 +351,9 @@ var create_content_table = (hdr, obj) =>
       ].join("")
     )
   )
-  (typeOf(obj))
+  // Replace spaces with dashes in the object's text name and convert to lowercase.
+  // This value is then used as the HTML id for the table
+  (hdr.replace(/\s+/g, '-').toLowerCase())
 
 
 // Argument nvArray must be an array in which each element is an object containing:
