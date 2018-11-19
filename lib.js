@@ -328,7 +328,7 @@ var object_to_table = (obj_arg, obj_name, depth) => {
       }
 
       // Join the accumulator array into a string then return it as a table
-      return_val = as_table([`id=${obj_name}-content`, "class='bfu-table'"], acc.join(""))
+      return_val = as_table(["class='bfu-table'"], acc.join(""))
     }
     else {
       return_val = "No enumerable properties"
