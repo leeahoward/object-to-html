@@ -140,12 +140,12 @@ var value_to_str = (obj_name, val, depth) =>
     // Nope, so is it a function?
     : valType === "Function"
       // Yup, so don't bother displaying the function's source code
-      ? "Source code supressed"
+      ? "Source code suppressed"
       // Nope, so is it an array?
       : valType === "Array"
         // Yup, so display the array's contents
         // TODO: Need some sort of look ahead here to examine teh data type of each array element
-        ? as_div([`id='${obj_name}-content'`, "style='display:none'"], array_to_str(val, obj_name, depth+1))
+        ? as_div([`id='${obj_name}-content'`, "style='display:none'"], array_to_table(val, obj_name, depth+1))
         // Nope, so is it a Map object?
         : valType === "Map"
           // Yup, so transform the map's content into a collapsible DIV
@@ -221,26 +221,12 @@ var as_html   = as_html_el("html")
 
 // *********************************************************************************************************************
 // Generate a header row for an NTV (Name, Type, Value) table
-var make_table_hdr_row = () =>
-  as_tr([], [ as_th(["class='bfu-th'"],"Property")
-            , as_th(["class='bfu-th'"],"Type")
-            , as_th(["class='bfu-th'"],"Value")
+var make_table_hdr_row = (col1_txt, depth) =>
+  as_tr([], [ as_th(["class='bfu-th'"], col1_txt)
+            , as_th(["class='bfu-th'"], "Type")
+            , as_th(["class='bfu-th'"], `Value (depth=${depth})`)
             ].join("")
        )
-
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-// Array to table
-var array_to_str = (arr, arr_name, depth) =>
-  // Have we exceeded the recursion depth limit?
-  depth <= depth_limit
-  // Nope, so does the array contain any elements?
-  ? arr.length
-    // Yup, so put the contents into a collapsible DIV
-    ? arr.map(el => value_to_str(arr_name, el, depth+1)).join("<br>")
-    // Nope - nothing to see here, move along...
-    : "[]"
-  // Yes, so show that the array has content, but we're just not going to display it
-  : "[...]"
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // Object to table
@@ -261,7 +247,7 @@ var object_to_table = (obj_arg, obj_name, depth) => {
   depth = depth || 0
 
   // Bail out if the recursion depth limit has been hit
-  if (depth === depth_limit) {
+  if (depth > depth_limit) {
     return_val = "{...}"
   }
   // If the object is either null or undefined, then report this
@@ -273,17 +259,17 @@ var object_to_table = (obj_arg, obj_name, depth) => {
     // Does this object have any enumerable properties?
     if (Object.keys(obj_arg).length > 0) {
       // Start with the header row
-      acc.push(make_table_hdr_row())
+      acc.push(make_table_hdr_row("Property", depth))
 
       // Show the enumerable keys
       for (var key in obj_arg) {
         cols           = []
-        this_prop_name = `${obj_name}-${key}`
+        this_prop_name = `${obj_name}-${key}`.toLowerCase()
         obj_type       = typeOf(obj_arg[key])
         prop_count     = property_count(obj_arg[key])
 
         // Add the Property Name column
-        cols.push(as_td(["class='bfu-td'"],key))
+        cols.push(as_td(["class='bfu-td'"], key.toLowerCase()))
 
         // In deciding whether or not to display the expand/collapse buttons, we must account for the following:
         // * Is the current value expandible?  (This is true only for Objects, Arrays and Maps)
@@ -291,7 +277,7 @@ var object_to_table = (obj_arg, obj_name, depth) => {
         // * Would adding the expand/collapse buttons exceed the recursion depth limit?
         if (obj_type === "Array" || obj_type === "Object" || obj_type === "Map") {
           if (prop_count > 0) {
-            if (depth <= depth_limit) {
+            if (depth < depth_limit) {
               // Display an expandible object, array or map
               type_col  = as_td([ "class='bfu-td'"]
                                 , [ expand_button_div(this_prop_name, obj_type)
@@ -332,6 +318,102 @@ var object_to_table = (obj_arg, obj_name, depth) => {
     }
     else {
       return_val = "No enumerable properties"
+    }
+  }
+
+  return return_val
+}
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+// Array to table
+// Transform an array into a table of Index, Type and Value
+var array_to_table = (arr_arg, arr_name, depth) => {
+  var acc  = []
+  var cols
+  var obj_type
+  var prop_count
+  var type_col
+  var value_col
+  var this_prop_name
+
+  var return_val = null
+
+  // Set current recursion depth to 0 if the argument is missing
+  depth = depth || 0
+
+  // Bail out if the recursion depth limit has been hit
+  if (depth > depth_limit) {
+    return_val = "[...]"
+  }
+  // If the object is either null or undefined, then report this
+  else if (isNullOrUndef(arr_arg)) {
+    return_val = arr_arg
+  }
+  else {
+    // Does the array contain any elements?
+    if (arr_arg.length > 0) {
+      // Start with the header row
+      acc.push(make_table_hdr_row("Index", depth))
+
+      // Display each array element
+      arr_arg.reduce((inner_acc, el, idx) => {
+        cols           = []
+        this_prop_name = `${arr_name}-${idx}`.toLowerCase()
+        obj_type       = typeOf(arr_arg[idx])
+        prop_count     = property_count(arr_arg[idx])
+
+        // Add the Index column
+        cols.push(as_td(["class='bfu-td'"], idx))
+
+        // In deciding whether or not to display the expand/collapse buttons, we must account for the following:
+        // * Is the current element expandible?  (This is true only for Objects, Arrays and Maps)
+        // * Does the Object, Array or Map actually have any content?
+        // * Would adding the expand/collapse buttons exceed the recursion depth limit?
+        if (obj_type === "Array" || obj_type === "Object" || obj_type === "Map") {
+          if (prop_count > 0) {
+            if (depth < depth_limit) {
+              // Display an expandible object, array or map
+              type_col  = as_td([ "class='bfu-td'"]
+                                , [ expand_button_div(this_prop_name, obj_type)
+                                  , collapse_button_div(this_prop_name, obj_type)
+                                  ].join("")
+                               )
+              value_col = as_td(["class='bfu-td'"], value_to_str(this_prop_name, arr_arg[idx], depth))
+            }
+            else {
+              // Display an object, array or map with suppressed content due to recursion depth limit and no
+              // expand/collapse buttons
+              type_col  = as_td(["class='bfu-td'"], obj_type)
+              value_col = as_td(["class='bfu-td'"], obj_type === "Array" ? "[...]" : "{...}")
+            }
+          }
+          else {
+            // Display an empty object, array or map with no expand/collapse buttons
+            type_col  = as_td(["class='bfu-td'"], obj_type)
+            value_col = as_td(["class='bfu-td'"], obj_type === "Array" ? "[]" : "{}")
+          }
+        }
+        else {
+          // Display some other data type and convert that value to a string
+          type_col  = as_td(["class='bfu-td'"], obj_type)
+          value_col = as_td(["class='bfu-td'"], value_to_str(this_prop_name, arr_arg[idx], depth))
+        }
+
+        // Add Type and Value columns to the current row
+        cols.push(type_col)
+        cols.push(value_col)
+
+        // Add the completed row to the accumulator
+        acc.push(as_tr([],cols.join("")))
+      },
+      // Accumulator used by reduce already contains a header row
+      acc)
+
+      // Join the accumulator array into a string then return it as a table
+      return_val = as_table(["class='bfu-table'"], acc.join(""))
+    }
+    else {
+      return_val = "[]"
     }
   }
 
@@ -400,7 +482,7 @@ var collapse_button_div = (obj_name, obj_type) =>
 
 
 
-// *********************************************************************************************************************
+  // *********************************************************************************************************************
 // PUBLIC API
 // *********************************************************************************************************************
 module.exports = {
@@ -422,10 +504,10 @@ module.exports = {
 
 , node_list_to_array : node_list_to_array
 
-// Generic HTML element generator
+// Partial function to generate a generic HTML element
 , as_html_el : as_html_el
 
-// HTML element partial functions
+// Specific HTML element functions
 , as_div     : as_div   
 , as_style   : as_style 
 , as_script  : as_script
