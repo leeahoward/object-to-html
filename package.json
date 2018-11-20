@@ -1,7 +1,7 @@
 {
   "name": "basic-formatting-utils",
   "description": "JavaScript utilities to display a server-side object as an HTML table with collapsible nested content",
-  "version": "1.2.12",
+  "version": "1.2.13",
   "author": {
     "name": "Chris Whealy",
     "email": "chris@whealy.com",
