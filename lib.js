@@ -81,6 +81,11 @@ var isNullOrUndef = x => isNull(x) || isUndefined(x)
 var isNumeric     = x => typeOf(x) === "Number"
 var isArray       = x => typeOf(x) === "Array"
 var isMap         = x => typeOf(x) === "Map"
+var isFunction    = x => typeOf(x) === "Function"
+
+// The NodeJS objects 'global' and 'process' return their own names when asked their type even though they are just
+// regular objects
+var isObject = x => (t => t === "Object" || t === "process" || t === "global")(typeOf(x))
 
 // A map of expandable data types and the functions needed to return the respective number of enumerable properties or
 // elements they might contain
@@ -93,6 +98,15 @@ expandableTypesMap.set("process", x => Object.keys(x).length)
 expandableTypesMap.set("global",  x => Object.keys(x).length)
 
 var isExpandable = x => expandableTypesMap.has(typeOf(x))
+
+// Map of columns headings per expandable data type
+var columnHeadingMap = new Map()
+
+columnHeadingMap.set("Array",   "Index")
+columnHeadingMap.set("Map",     "Key")
+columnHeadingMap.set("Object",  "Property")
+columnHeadingMap.set("process", "Property")
+columnHeadingMap.set("global",  "Property")
 
 // *********************************************************************************************************************
 // Return the number of enumerable properties/elements in an Object, Array or Map
@@ -156,7 +170,7 @@ var as_html_el = tag_name =>
   (propsArray, val) =>
     `${make_tag(tag_name, propsArray)}${isEmptyElement(tag_name) || isNullOrUndef(val) ? "" : `${val}</${tag_name}>`}`
 
-// Partial functions for generating specific HTML elements
+// Functions for generating specific HTML elements
 var as_div    = as_html_el("div")
 var as_style  = as_html_el("style")
 var as_script = as_html_el("script")
@@ -184,166 +198,107 @@ var make_table_hdr_row = (col1_txt, depth) =>
             ].join("")
        )
 
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-// Generate a single table row for either an object property or an Aarray or map element
-var table_row_from_prop = (parent_name, prop_name, prop_value, depth) => {
-  var cols           = []
-  var type_col       = ""
-  var value_col      = ""
-  var this_prop_name = `${parent_name}-${prop_name}`.toLowerCase()
-  var this_el_type   = typeOf(prop_value)
-
-  // Add column 1.  This will be eiether the Property name, Index number of Key name
-  cols.push(as_td(["class='bfu-td'"], prop_name))
-
-  // In deciding whether or not to display the expand/collapse buttons, we must account for the following:
-  // * Is the current element expandable?  (This is true only for Objects, Arrays or Maps)
-  // * Does the Object, Array or Map actually have any content?
-  // * Would adding the expand/collapse buttons exceed the recursion depth limit?
-  if (isExpandable(prop_value)) {
-    if (sizeOf(prop_value) > 0) {
-      if (depth < depth_limit) {
-        // Yup, we should display the expand/collapse buttons
-        type_col  = as_td([ "class='bfu-td'"]
-                          , [ expand_button_div(this_prop_name, this_el_type)
-                            , collapse_button_div(this_prop_name, this_el_type)
-                            ].join("")
-                         )
-        value_col = as_td(["class='bfu-td'"], render_value(prop_value, this_prop_name, depth+1))
-      }
-      else {
-        // Display an object, array or map with suppressed content due to recursion depth limit and no
-        // expand/collapse buttons
-        type_col  = as_td(["class='bfu-td'"], this_el_type)
-        value_col = as_td(["class='bfu-td'"], this_el_type === "Array" ? "[...]" : "{...}")
-      }
-    }
-    else {
-      // Display an empty object, array or map with no expand/collapse buttons
-      type_col  = as_td(["class='bfu-td'"], this_el_type)
-      value_col = as_td(["class='bfu-td'"], this_el_type === "Array" ? "[]" : "{}")
-    }
-  }
-  else {
-    // Display some other data type and convert that value to a string
-    type_col  = as_td(["class='bfu-td'"], this_el_type)
-    value_col = as_td(["class='bfu-td'"], render_value(prop_value, this_prop_name, depth+1))
-  }
-
-  // Add the Type and Value columns to the current row, join the row into single string, then return this as a TR element
-  return as_tr( []
-              , push(
-                  push(cols, type_col)
-                , value_col
-                ).join("")
-              )
-}
+var empty_placeholder      = obj => isArray(obj) ? "[]"    : "{}"
+var suppressed_placeholder = obj => isArray(obj) ? "[...]" : "{...}"
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-// Transform the current value into a useful HTML representation.
-// If the value is enumerable in some way (I.E. an an Array, Map or Object), then create a table, otherwise, simply
-// return the toString() value
-var render_value = (enum_arg, enum_name, depth) => {
+// Transform iterable object into an array of TR elements
+var make_table_rows_from_obj = (obj_name, obj, col1txt, depth) => {
   var acc        = []
-  var return_val = null
+  var return_val = empty_placeholder(obj)
 
-  // How should this value be displayed?
-  switch (typeOf(enum_arg)) {
-    // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    // Transform an array to a table
-    // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    case "Array":
-      if (sizeOf(enum_arg) > 0) {
-        // Insert the header row for an array
-        acc.push(make_table_hdr_row("Index", depth))
+  if (sizeOf(obj) > 0) {
+    // Insert the header row
+    acc.push(make_table_hdr_row(col1txt, depth))
 
-        // Transform each array element into a TR tag and add to the accumulator
-        acc.push(enum_arg.map((el,idx) => table_row_from_prop(enum_name, idx, el, depth)).join(""))
-
-        // Place all the rows into a TABLE, then put the TABLE into a collapsible DIV
-        return_val = as_div( [`id="${enum_name}-content"`, depth === 0 ? "" : "style='display:none'"]
-                           , as_table([ "class='bfu-table'"], acc.join("")))
+    // Transform each object property/element into a TR element
+    if (isArray(obj)) {
+      acc.push(obj.map((el,idx) => table_row_from_prop(obj_name, idx, el, depth)).join(""))
+    }
+    else if (isObject(obj)) {
+      for (var key in obj) {
+        acc.push(table_row_from_prop(obj_name, key, obj[key], depth))
       }
-      else {
-        return_val = "[]"
-      }
-
-      break
-
-    // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    // Transform an object to a table.
-    // Also take into account the various NodeJS objects that, when asked their data type, return their own name
-    // instead of "Object".  (Ignore the WebAssembly object)
-    // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    case "Object":
-    case "process":
-    case "global":
-      if (sizeOf(enum_arg) > 0) {
-        // Insert the header row for an object
-        acc.push(make_table_hdr_row("Property", depth))
-
-        // Transform each object property into a TR tag
-        for (var key in enum_arg) {
-          acc.push(table_row_from_prop(enum_name, key, enum_arg[key], depth))
-        }
-
-        // Place all the rows into a TABLE, then put the TABLE into a collapsible DIV
-        return_val = as_div( [`id="${enum_name}-content"`, depth === 0 ? "" : "style='display:none'"]
-                           , as_table([ "class='bfu-table'"], acc.join("")))
-      }
-      else {
-        return_val = "{}"
-      }
-
-      break
-
-    // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    // Transform a map to a table
-    // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    case "Map":
-      if (sizeOf(enum_arg) > 0) {
-        // Insert the header row for a map
-        acc.push(make_table_hdr_row("Key", depth))
-
-        var iter = enum_arg[Symbol.iterator]()
+    }
+    else if (isMap(obj)) {
+      var iter = obj[Symbol.iterator]()
         
-        for (let el of iter) {
-          acc.push(table_row_from_prop(enum_name, el[0], el[1], depth))
-        }
-        
-        // Place all the rows into a TABLE, then put the TABLE into a collapsible DIV
-        return_val = as_div( [`id="${enum_name}-content"`, depth === 0 ? "" : "style='display:none'"]
-                            , as_table([ "class='bfu-table'"], acc.join("")))
+      for (let el of iter) {
+        acc.push(table_row_from_prop(obj_name, el[0], el[1], depth))
       }
-      else {
-        return_val = "[]"
-      }
+    }
 
-      break
-
-    // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    // Don't bother displaying the source code of a function
-    // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    case "Function":
-      return_val = "Source code suppressed"
-      break
-
-    // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    // Everything else just passes through toString()
-    // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    case "Boolean":
-    case "Null":
-    case "Undefined":
-    case "Number":
-    case "String":
-    case "Symbol":
-    
-    default:
-      return_val = enum_arg
+    return_val = acc.join("")
   }
 
   return return_val
 }
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+// Place table rows into a table, then into a collapsible DIV
+var make_collapsible_div = (div_name, content, depth) =>
+  as_div( [`id="${div_name}-content"`, depth === 0 ? "" : "style='display:none'"]
+        , as_table([ "class='bfu-table'"], content)
+        )
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+// Generate a single table row for either an object property or an array or map element
+var table_row_from_prop = (parent_name, prop_name, prop_value, depth) => {
+  var cols           = []
+  var this_prop_name = `${parent_name}-${prop_name}`.toLowerCase()
+  var this_el_type   = typeOf(prop_value)
+
+  // Add contents to column 1
+  // Depending on the datatype being transformed, this will be either a property or key name, or an index number
+  cols.push(as_td(["class='bfu-td'"], prop_name))
+
+  // The expand/collapse buttons should only be displayed when the following three conditions are true:
+  // * The current element is expandable
+  // * The expandable object has contents
+  // * We are not about to exceed the recursion depth limit
+  var type_col = (isExpandable(prop_value) && sizeOf(prop_value) > 0 && depth < depth_limit)
+    ? expand_button_div(this_prop_name, this_el_type) + collapse_button_div(this_prop_name, this_el_type)
+    : this_el_type
+
+    // How should the current object be rendered?
+  var value_col = isExpandable(prop_value)
+    ? (sizeOf(prop_value) > 0)
+      ? (depth < depth_limit)
+        ? render_value(prop_value, this_prop_name, depth+1)
+        : suppressed_placeholder(prop_value)
+      : empty_placeholder(prop_value)
+    : render_value(prop_value, this_prop_name, depth+1)
+
+  // Add the Type and Value columns to the current row
+  cols.push(as_td(["class='bfu-td'"], type_col))
+  cols.push(as_td(["class='bfu-td'"], value_col))
+  
+  // Join the row into single string then return this as a TR element
+  return as_tr([], cols.join(""))
+}
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+// Transform the current value into a useful HTML representation.
+// If the value is expandable, then create a table, otherwise, simply return the value
+var render_value = (enum_arg, enum_name, depth) =>
+  // Is the current object expandable?
+  (isExpandable(enum_arg))
+    // Yup, so transform it into a table.
+    ? make_collapsible_div(
+        enum_name
+      , make_table_rows_from_obj(
+          enum_name
+        , enum_arg
+        , columnHeadingMap.get(typeOf(enum_arg))
+        , depth
+        )
+      , depth
+      )
+    // Nope, so is it a function?
+    : isFunction(enum_arg)
+      ? "Source code suppressed"
+      // Just return the value
+      : enum_arg
 
 
 
@@ -386,10 +341,10 @@ var create_content = nvArray =>
 
 
 // *********************************************************************************************************************
-// [Collaps|Expand]ible Objects and Arrays
+// Expandable/Collapsible content
 // Do not add the src parameter to the expand/collapse arrow icons here as this will duplicate the large Base64 encoded
 // value every time one of these icons is generated.  Instead, the src of each icon will be added dynamically by the
-// JavaScript code included at the end of the parent generated DIV element
+// client-side JavaScript code included at the end of the parent generated DIV element
 var arrow_right = as_img([`name='${arrow_right_icon_name}'`])
 var arrow_down  = as_img([`name='${arrow_down_icon_name}'`])
 
@@ -422,6 +377,8 @@ module.exports = {
 , isNumeric     : isNumeric
 , isArray       : isArray
 , isMap         : isMap
+, isObject      : isObject
+, isFunction    : isFunction
 
 // Returns true if passed a Map, Array or Object; false for all other data types
 , isExpandable : isExpandable
