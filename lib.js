@@ -18,7 +18,7 @@
  * =====================================================================================================================
  **/
 
-var fs = require("fs")
+//var fs = require("fs")
 
 // *********************************************************************************************************************
 // Discover my own version number
@@ -28,7 +28,7 @@ var { version } = require("./package.json")
 
 // *********************************************************************************************************************
 // Limit the recursion depth used by render_value()
-var depth_limit = 2
+var depth_limit = 3
 
 var get_depth_limit = ()  => depth_limit
 var set_depth_limit = lim => depth_limit = (isNumeric(lim) && lim >= 1) ? lim : depth_limit
@@ -405,11 +405,7 @@ var collapse_button_div = (obj_name, obj_type) =>
   , [obj_type, as_button(["type='button'"], arrow_down)].join("")
   )
 
-var m = new Map()
-m.set("first", expandableTypesMap)
-m.set("second",process)
-
-fs.writeFileSync("test.html", create_content([{title:"Test Map", value:m}, {title:"NodeJS Process", value:process}]))
+//fs.writeFileSync("test.html", create_content([{title:"NodeJS Process", value:process}]))
 
   // *********************************************************************************************************************
 // PUBLIC API
