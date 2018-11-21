@@ -18,9 +18,20 @@
  * =====================================================================================================================
  **/
 
+var fs = require("fs")
+
 // *********************************************************************************************************************
 // Discover my own version number
 var { version } = require("./package.json")
+
+
+
+// *********************************************************************************************************************
+// Limit the recursion depth used by render_value()
+var depth_limit = 2
+
+var get_depth_limit = ()  => depth_limit
+var set_depth_limit = lim => depth_limit = (isNumeric(lim) && lim >= 1) ? lim : depth_limit
 
 
 
@@ -71,7 +82,22 @@ var isNumeric     = x => typeOf(x) === "Number"
 var isArray       = x => typeOf(x) === "Array"
 var isMap         = x => typeOf(x) === "Map"
 
+// A map of expandable data types and the functions needed to return the respective number of enumerable properties or
+// elements they might contain
+var expandableTypesMap = new Map()
 
+expandableTypesMap.set("Array",   x => x.length)
+expandableTypesMap.set("Map",     x => x.size)
+expandableTypesMap.set("Object",  x => Object.keys(x).length)
+expandableTypesMap.set("process", x => Object.keys(x).length)
+expandableTypesMap.set("global",  x => Object.keys(x).length)
+
+var isExpandable = x => expandableTypesMap.has(typeOf(x))
+
+// *********************************************************************************************************************
+// Return the number of enumerable properties/elements in an Object, Array or Map
+// This function returns zero for all other dataypes
+var sizeOf = obj => isExpandable(obj) ? expandableTypesMap.get(typeOf(obj))(obj) : 0
 
 // *********************************************************************************************************************
 // Array operations that can be used in chained function calls such as map and reduce
@@ -83,85 +109,9 @@ var node_list_to_array = nl => Array.prototype.slice.call(nl)
 
 
 
-// *********************************************************************************************************************
-// Count the numbers of properties/elements in an Object, Array or Map
-// This function will return zero for all other dataypes including null, undefined and NaN
-var property_count = obj =>
-  (datatype =>
-    datatype === "Object"
-    ? Object.keys(obj).length
-    : datatype === "Array"
-      ? obj.length
-      : datatype === "Map"
-        ? obj.size
-        : 0
-  )
-  // Pass datatype of argument to the inner anonymous function above
-  (typeOf(obj))
-
-
-
-// *********************************************************************************************************************
-// Transform various datatypes to strings
-
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-// Limit the recursion depth used by object_to_table() and array_to_table()
-var depth_limit = 2
-
-var get_depth_limit = ()  => depth_limit
-var set_depth_limit = lim => depth_limit = (isNumeric(lim) && lim >= 1) ? lim : depth_limit
-
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // Timestamp to string
 var ts_to_str = ts_arg => isNullOrUndef(ts_arg) ? ts_arg : (new Date(ts_arg)).toLocaleString()
-
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-// Transform a Map object into a printable form
-// TODO: Probably need to generate another table here...
-var map_to_str = map_arg => {
-  var acc, iter
-
-  if (isNullOrUndef(map_arg)) {
-    return map_arg
-  }
-  else {
-    acc = []
-    iter = map_arg[Symbol.iterator]()
-
-    for (let el of iter) {
-      acc.push(`["${el[0]}", ${el[1]}]`)
-    }
-
-    return acc.join(",<br>")
-  }
-}
-
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-// Transform a generic value into a string
-var value_to_str = (obj_name, val, depth) =>
-  (valType =>
-    // Is the argument an Object?
-    valType === "Object"
-    // Yup, so transform the object into a nested table.  All nested tables start off being hidden
-    ? as_div([`id="${obj_name}-content"`, "style='display:none'"], object_to_table(val, obj_name, depth+1))
-    // Nope, so is it a function?
-    : valType === "Function"
-      // Yup, so don't bother displaying the function's source code
-      ? "Source code suppressed"
-      // Nope, so is it an array?
-      : valType === "Array"
-        // Yup, so display the array's contents
-        ? as_div([`id='${obj_name}-content'`, "style='display:none'"], array_to_table(val, obj_name, depth+1))
-        // Nope, so is it a Map object?
-        : valType === "Map"
-          // Yup, so transform the map's content into a collapsible DIV
-          ? as_div([`id='${obj_name}-content'`, "style='display:none'"], map_to_str(val))
-          // So now we've eliminated all the datatypes where expand/collapse formatting is needed
-          // Therefore, we'll implicitly call this value's toString() function and hope it returns something useful...
-          : val
-  )
-  // Pass the current value's datatype as an argument to the above anonymous inner function
-  (typeOf(val))
 
 
 
@@ -175,7 +125,7 @@ const emptyElements = [
 , 'param', 'command', 'keygen',   'source']
 
 // Basic CSS formating
-// Added "bfu-" prefix to class names to avoid potential name clashes
+// "bfu-" prefix added to all class names to avoid potential name clashes
 var content_table_style = [
    ".bfu-table { float:left; border-collapse: collapse; }"
  , ".bfu-table, .bfu-th, .bfu-td { border: 1px solid grey; }"
@@ -235,192 +185,161 @@ var make_table_hdr_row = (col1_txt, depth) =>
        )
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-// Object to table
-// This function avoids the cases where a simple call to JSON.stringify() would explode with either "Callstack size
-// exceeded" or "TypeError: Converting circular structure to JSON" errors - as happens with an HTTP request object
-var object_to_table = (obj_arg, obj_name, depth) => {
-  var acc  = []
-  var cols
-  var obj_type
-  var prop_count
-  var type_col
-  var value_col
-  var this_prop_name
+// Generate a single table row for either an object property or an Aarray or map element
+var table_row_from_prop = (parent_name, prop_name, prop_value, depth) => {
+  var cols           = []
+  var type_col       = ""
+  var value_col      = ""
+  var this_prop_name = `${parent_name}-${prop_name}`.toLowerCase()
+  var this_el_type   = typeOf(prop_value)
 
-  var return_val = null
+  // Add column 1.  This will be eiether the Property name, Index number of Key name
+  cols.push(as_td(["class='bfu-td'"], prop_name))
 
-  // Set current recursion depth to 0 if the argument is missing
-  depth = depth || 0
-
-  // Bail out if the recursion depth limit has been hit
-  if (depth > depth_limit) {
-    return_val = "{...}"
-  }
-  // If the object is either null or undefined, then report this
-  else if (isNullOrUndef(obj_arg)) {
-    return_val = obj_arg
-  }
-  // Does the object contain anything we can display?
-  else {
-    // Does this object have any enumerable properties?
-    if (Object.keys(obj_arg).length > 0) {
-      // Start with the header row
-      acc.push(make_table_hdr_row("Property", depth))
-
-      // Show the enumerable keys
-      for (var key in obj_arg) {
-        cols           = []
-        this_prop_name = `${obj_name}-${key}`.toLowerCase()
-        obj_type       = typeOf(obj_arg[key])
-        prop_count     = property_count(obj_arg[key])
-
-        // Add the Property Name column
-        cols.push(as_td(["class='bfu-td'"], key.toLowerCase()))
-
-        // In deciding whether or not to display the expand/collapse buttons, we must account for the following:
-        // * Is the current value expandible?  (This is true only for Objects, Arrays and Maps)
-        // * Does the Object, Array or Map actually have any content?
-        // * Would adding the expand/collapse buttons exceed the recursion depth limit?
-        if (obj_type === "Array" || obj_type === "Object" || obj_type === "Map") {
-          if (prop_count > 0) {
-            if (depth < depth_limit) {
-              // Display an expandible object, array or map
-              type_col  = as_td([ "class='bfu-td'"]
-                                , [ expand_button_div(this_prop_name, obj_type)
-                                  , collapse_button_div(this_prop_name, obj_type)
-                                  ].join("")
-                               )
-              value_col = as_td(["class='bfu-td'"], value_to_str(this_prop_name, obj_arg[key], depth))
-            }
-            else {
-              // Display an object, array or map with suppressed content due to recursion depth limit and no
-              // expand/collapse buttons
-              type_col  = as_td(["class='bfu-td'"], obj_type)
-              value_col = as_td(["class='bfu-td'"], obj_type === "Array" ? "[...]" : "{...}")
-            }
-          }
-          else {
-            // Display an empty object, array or map with no expand/collapse buttons
-            type_col  = as_td(["class='bfu-td'"], obj_type)
-            value_col = as_td(["class='bfu-td'"], obj_type === "Array" ? "[]" : "{}")
-          }
-        }
-        else {
-          // Display some other data type and convert that value to a string
-          type_col  = as_td(["class='bfu-td'"], obj_type)
-          value_col = as_td(["class='bfu-td'"], value_to_str(this_prop_name, obj_arg[key], depth))
-        }
-
-        // Add Type and Value columns to the current row
-        cols.push(type_col)
-        cols.push(value_col)
-
-        // Add the completed row to the accumulator
-        acc.push(as_tr([],cols.join("")))
+  // In deciding whether or not to display the expand/collapse buttons, we must account for the following:
+  // * Is the current element expandable?  (This is true only for Objects, Arrays or Maps)
+  // * Does the Object, Array or Map actually have any content?
+  // * Would adding the expand/collapse buttons exceed the recursion depth limit?
+  if (isExpandable(prop_value)) {
+    if (sizeOf(prop_value) > 0) {
+      if (depth < depth_limit) {
+        // Yup, we should display the expand/collapse buttons
+        type_col  = as_td([ "class='bfu-td'"]
+                          , [ expand_button_div(this_prop_name, this_el_type)
+                            , collapse_button_div(this_prop_name, this_el_type)
+                            ].join("")
+                         )
+        value_col = as_td(["class='bfu-td'"], render_value(prop_value, this_prop_name, depth+1))
       }
-
-      // Join the accumulator array into a string then return it as a table
-      return_val = as_table(["class='bfu-table'"], acc.join(""))
+      else {
+        // Display an object, array or map with suppressed content due to recursion depth limit and no
+        // expand/collapse buttons
+        type_col  = as_td(["class='bfu-td'"], this_el_type)
+        value_col = as_td(["class='bfu-td'"], this_el_type === "Array" ? "[...]" : "{...}")
+      }
     }
     else {
-      return_val = "No enumerable properties"
+      // Display an empty object, array or map with no expand/collapse buttons
+      type_col  = as_td(["class='bfu-td'"], this_el_type)
+      value_col = as_td(["class='bfu-td'"], this_el_type === "Array" ? "[]" : "{}")
     }
   }
+  else {
+    // Display some other data type and convert that value to a string
+    type_col  = as_td(["class='bfu-td'"], this_el_type)
+    value_col = as_td(["class='bfu-td'"], render_value(prop_value, this_prop_name, depth+1))
+  }
 
-  return return_val
+  // Add the Type and Value columns to the current row, join the row into single string, then return this as a TR element
+  return as_tr( []
+              , push(
+                  push(cols, type_col)
+                , value_col
+                ).join("")
+              )
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-// Array to table
-// Transform an array into a table of Index, Type and Value
-var array_to_table = (arr_arg, arr_name, depth) => {
-  var acc  = []
-  var cols
-  var obj_type
-  var prop_count
-  var type_col
-  var value_col
-  var this_prop_name
-
+// Transform the current value into a useful HTML representation.
+// If the value is enumerable in some way (I.E. an an Array, Map or Object), then create a table, otherwise, simply
+// return the toString() value
+var render_value = (enum_arg, enum_name, depth) => {
+  var acc        = []
   var return_val = null
 
-  // Set current recursion depth to 0 if the argument is missing
-  depth = depth || 0
+  // How should this value be displayed?
+  switch (typeOf(enum_arg)) {
+    // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    // Transform an array to a table
+    // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    case "Array":
+      if (sizeOf(enum_arg) > 0) {
+        // Insert the header row for an array
+        acc.push(make_table_hdr_row("Index", depth))
 
-  // Bail out if the recursion depth limit has been hit
-  if (depth > depth_limit) {
-    return_val = "[...]"
-  }
-  // If the object is either null or undefined, then report this
-  else if (isNullOrUndef(arr_arg)) {
-    return_val = arr_arg
-  }
-  else {
-    // Does the array contain any elements?
-    if (arr_arg.length > 0) {
-      // Start with the header row
-      acc.push(make_table_hdr_row("Index", depth))
+        // Transform each array element into a TR tag and add to the accumulator
+        acc.push(enum_arg.map((el,idx) => table_row_from_prop(enum_name, idx, el, depth)).join(""))
 
-      // Display each array element
-      arr_arg.reduce((inner_acc, el, idx) => {
-        cols           = []
-        this_prop_name = `${arr_name}-${idx}`.toLowerCase()
-        obj_type       = typeOf(arr_arg[idx])
-        prop_count     = property_count(arr_arg[idx])
+        // Place all the rows into a TABLE, then put the TABLE into a collapsible DIV
+        return_val = as_div( [`id="${enum_name}-content"`, depth === 0 ? "" : "style='display:none'"]
+                           , as_table([ "class='bfu-table'"], acc.join("")))
+      }
+      else {
+        return_val = "[]"
+      }
 
-        // Add the Index column
-        cols.push(as_td(["class='bfu-td'"], idx))
+      break
 
-        // In deciding whether or not to display the expand/collapse buttons, we must account for the following:
-        // * Is the current element expandible?  (This is true only for Objects, Arrays and Maps)
-        // * Does the Object, Array or Map actually have any content?
-        // * Would adding the expand/collapse buttons exceed the recursion depth limit?
-        if (obj_type === "Array" || obj_type === "Object" || obj_type === "Map") {
-          if (prop_count > 0) {
-            if (depth < depth_limit) {
-              // Display an expandible object, array or map
-              type_col  = as_td([ "class='bfu-td'"]
-                                , [ expand_button_div(this_prop_name, obj_type)
-                                  , collapse_button_div(this_prop_name, obj_type)
-                                  ].join("")
-                               )
-              value_col = as_td(["class='bfu-td'"], value_to_str(this_prop_name, arr_arg[idx], depth))
-            }
-            else {
-              // Display an object, array or map with suppressed content due to recursion depth limit and no
-              // expand/collapse buttons
-              type_col  = as_td(["class='bfu-td'"], obj_type)
-              value_col = as_td(["class='bfu-td'"], obj_type === "Array" ? "[...]" : "{...}")
-            }
-          }
-          else {
-            // Display an empty object, array or map with no expand/collapse buttons
-            type_col  = as_td(["class='bfu-td'"], obj_type)
-            value_col = as_td(["class='bfu-td'"], obj_type === "Array" ? "[]" : "{}")
-          }
-        }
-        else {
-          // Display some other data type and convert that value to a string
-          type_col  = as_td(["class='bfu-td'"], obj_type)
-          value_col = as_td(["class='bfu-td'"], value_to_str(this_prop_name, arr_arg[idx], depth))
+    // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    // Transform an object to a table.
+    // Also take into account the various NodeJS objects that, when asked their data type, return their own name
+    // instead of "Object".  (Ignore the WebAssembly object)
+    // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    case "Object":
+    case "process":
+    case "global":
+      if (sizeOf(enum_arg) > 0) {
+        // Insert the header row for an object
+        acc.push(make_table_hdr_row("Property", depth))
+
+        // Transform each object property into a TR tag
+        for (var key in enum_arg) {
+          acc.push(table_row_from_prop(enum_name, key, enum_arg[key], depth))
         }
 
-        // Add Type and Value columns to the current row
-        cols.push(type_col)
-        cols.push(value_col)
+        // Place all the rows into a TABLE, then put the TABLE into a collapsible DIV
+        return_val = as_div( [`id="${enum_name}-content"`, depth === 0 ? "" : "style='display:none'"]
+                           , as_table([ "class='bfu-table'"], acc.join("")))
+      }
+      else {
+        return_val = "{}"
+      }
 
-        // Add the completed row to the accumulator
-        acc.push(as_tr([],cols.join("")))
-      },
-      // Accumulator used by reduce already contains a header row
-      acc)
+      break
 
-      // Join the accumulator array into a string then return it as a table
-      return_val = as_table(["class='bfu-table'"], acc.join(""))
-    }
-    else {
-      return_val = "[]"
-    }
+    // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    // Transform a map to a table
+    // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    case "Map":
+      if (sizeOf(enum_arg) > 0) {
+        // Insert the header row for a map
+        acc.push(make_table_hdr_row("Key", depth))
+
+        var iter = enum_arg[Symbol.iterator]()
+        
+        for (let el of iter) {
+          acc.push(table_row_from_prop(enum_name, el[0], el[1], depth))
+        }
+        
+        // Place all the rows into a TABLE, then put the TABLE into a collapsible DIV
+        return_val = as_div( [`id="${enum_name}-content"`, depth === 0 ? "" : "style='display:none'"]
+                            , as_table([ "class='bfu-table'"], acc.join("")))
+      }
+      else {
+        return_val = "[]"
+      }
+
+      break
+
+    // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    // Don't bother displaying the source code of a function
+    // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    case "Function":
+      return_val = "Source code suppressed"
+      break
+
+    // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    // Everything else just passes through toString()
+    // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    case "Boolean":
+    case "Null":
+    case "Undefined":
+    case "Number":
+    case "String":
+    case "Symbol":
+    
+    default:
+      return_val = enum_arg
   }
 
   return return_val
@@ -435,7 +354,7 @@ var create_content_table = (hdr, obj) =>
     as_div(
       ["class='bfu-content'"],
       [ as_h2(["class='bfu-header2'"], hdr)
-      , object_to_table(obj, obj_name)
+      , render_value(obj, obj_name, 0)
       ].join("")
     )
   )
@@ -486,7 +405,11 @@ var collapse_button_div = (obj_name, obj_type) =>
   , [obj_type, as_button(["type='button'"], arrow_down)].join("")
   )
 
+var m = new Map()
+m.set("first", expandableTypesMap)
+m.set("second",process)
 
+fs.writeFileSync("test.html", create_content([{title:"Test Map", value:m}, {title:"NodeJS Process", value:process}]))
 
   // *********************************************************************************************************************
 // PUBLIC API
@@ -503,6 +426,12 @@ module.exports = {
 , isNumeric     : isNumeric
 , isArray       : isArray
 , isMap         : isMap
+
+// Returns true if passed a Map, Array or Object; false for all other data types
+, isExpandable : isExpandable
+
+// Return the number of enumerable elements or properties with a Map, Array or Object
+, sizeOf : sizeOf
 
 // Array operations suitable for use with map or reduce
 , push    : push
