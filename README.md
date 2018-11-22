@@ -6,11 +6,18 @@ This NPM module contains a simple set of utilities to format a JavaScript object
 
 ![Screen shot](./img/screenshot.png)
 
-Nested objects, arrays or maps will be displayed in a collapsed form.  Click on the expand/collapse icons in the `Type` column to hide or display this data.
+### Behaviour
+
+* Object properties are listed in alphabetic order
+* Only object properties of type `Object`, `Array` or `Map` are considered expandable
+* By default, expandable object properties will be displayed in a collapsed state
+* Click on the expand/collapse button in the `Type` column to hide or display this data.
 
 ### But Why?
 
-I wrote this utility primarily to overcome the problem that many standard objects (such as HTTP `request` or `response` objects) contain circular references that cause `JSON.stringify` to explode.
+I wrote this utility primarily to overcome the problem that many standard JavaScript objects (such as an HTTP `request` object or NodeJS's `global` object) contain circular references that cause `JSON.stringify` to explode.
+
+Therefore, rather than resorting to the tedious, trial-and-error approach of repeatedly calling `JSON.stringify` within a `try`/`catch` block, I thought I could achieve a more user-friendly result by writing my own solution.
 
 ## Usage
 
