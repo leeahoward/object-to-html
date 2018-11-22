@@ -7,12 +7,13 @@
  * A node library containing various helpful formatting functions for transforming a JavaScript object into an HTML
  * table.
  * 
- * Nested objects are transformed into nested tables, but only down to a predetermined depth (default = 2)
- * Once the recursion limit is hit, objects are displayed as "{...}"
+ * Nested objects are transformed into nested tables, but only down to a predetermined depth (default = 3)
+ * Once the recursion limit is hit, objects and arrays are displayed as "{...}" or "[...]" respectively
  * 
  * This node app is designed to run inside a "Function as a Service" environment - I.E. a stateless K8S container that
  * disappears as soon as the response has been returned to the client.  Therefore, all data needed by the client is
- * delivered in a single HTTP response.  This includes image source data
+ * delivered in a single HTTP response.  Hence the need for Base64 encoded image src data to be added dynamically to IMG
+ * elements by client-side coding
  * 
  * Author : Chris Whealy (www.whealy.com)
  * =====================================================================================================================
@@ -24,16 +25,12 @@
 // Discover my own version number
 var { version } = require("./package.json")
 
-
-
 // *********************************************************************************************************************
 // Limit the recursion depth used by render_value()
 var depth_limit = 3
 
 var get_depth_limit = ()  => depth_limit
 var set_depth_limit = lim => depth_limit = (isNumeric(lim) && lim >= 1) ? lim : depth_limit
-
-
 
 // *********************************************************************************************************************
 // The arrow icon names are used by coding that runs both on the server-side and the client-side
@@ -69,7 +66,6 @@ var  static_src_code = [
 , "node_list_to_array(document.getElementsByName(\`\${arrow_right_icon_name}\`)).map(el => set_image_src(el, arrow_right_src));"
 , "node_list_to_array(document.getElementsByName(\`\${arrow_down_icon_name}\`)).map(el => set_image_src(el, arrow_down_src));"
 ].join("")
-
 
 // *********************************************************************************************************************
 // Type checking operations
@@ -108,7 +104,7 @@ columnHeadingMap.set("Object",  "Property")
 columnHeadingMap.set("process", "Property")
 columnHeadingMap.set("global",  "Property")
 
-// *********************************************************************************************************************
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // Return the number of enumerable properties/elements in an Object, Array or Map
 // This function returns zero for all other dataypes
 var sizeOf = obj => isExpandable(obj) ? expandableTypesMap.get(typeOf(obj))(obj) : 0
@@ -121,14 +117,6 @@ var unshift = (arr, newEl) => (_ => arr)(arr.unshift(newEl))
 // Transform a non-mappable NodeList into a standard JavaScript Array
 var node_list_to_array = nl => Array.prototype.slice.call(nl)
 
-
-
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-// Timestamp to string
-var ts_to_str = ts_arg => isNullOrUndef(ts_arg) ? ts_arg : (new Date(ts_arg)).toLocaleString()
-
-
-
 // *********************************************************************************************************************
 // Generate HTML elements
 // None of these HTML elements require a closing tag
@@ -137,6 +125,8 @@ const emptyElements = [
 , 'col',   'frame',   'hr',       'img'
 , 'input', 'isindex', 'link',     'meta'
 , 'param', 'command', 'keygen',   'source']
+
+var isEmptyElement = tag_name => emptyElements.indexOf(tag_name) >= 0
 
 // Basic CSS formating
 // "bfu-" prefix added to all class names to avoid potential name clashes
@@ -150,8 +140,6 @@ var content_table_style = [
  , ".bfu-content { display: table-row; }"
  , ".bfu-header2 { margin-top: 1em; }"
 ].join(" ")
-
-var isEmptyElement = tag_name => emptyElements.indexOf(tag_name) >= 0
 
 // Generate an opening HTML tag
 var make_tag = (tag_name, props_array) =>
@@ -187,8 +175,6 @@ var as_p      = as_html_el("p")
 var as_body   = as_html_el("body")
 var as_html   = as_html_el("html")
 
-
-
 // *********************************************************************************************************************
 // Generate a header row for an NTV (Name, Type, Value) table
 var make_table_hdr_row = (col1_txt, depth) =>
@@ -204,8 +190,9 @@ var suppressed_placeholder = obj => isArray(obj) ? "[...]" : "{...}"
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // Transform iterable object into an array of TR elements
 var make_table_rows_from_obj = (obj_name, obj, col1txt, depth) => {
-  var acc        = []
+  // Start by assuming that the object is empty
   var return_val = empty_placeholder(obj)
+  var acc        = []
 
   if (sizeOf(obj) > 0) {
     // Insert the header row
@@ -236,9 +223,9 @@ var make_table_rows_from_obj = (obj_name, obj, col1txt, depth) => {
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // Place table rows into a table, then into a collapsible DIV
-var make_collapsible_div = (div_name, content, depth) =>
+var make_collapsible_div = (div_name, table_rows, depth) =>
   as_div( [`id="${div_name}-content"`, depth === 0 ? "" : "style='display:none'"]
-        , as_table([ "class='bfu-table'"], content)
+        , as_table(["class='bfu-table'"], table_rows)
         )
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -257,10 +244,11 @@ var table_row_from_prop = (parent_name, prop_name, prop_value, depth) => {
   // * The expandable object has contents
   // * We are not about to exceed the recursion depth limit
   var type_col = (isExpandable(prop_value) && sizeOf(prop_value) > 0 && depth < depth_limit)
-    ? expand_button_div(this_prop_name, this_el_type) + collapse_button_div(this_prop_name, this_el_type)
+    ? expand_button_div(this_prop_name, this_el_type) +
+      collapse_button_div(this_prop_name, this_el_type)
     : this_el_type
 
-    // How should the current object be rendered?
+  // How should the current object be rendered?
   var value_col = isExpandable(prop_value)
     ? (sizeOf(prop_value) > 0)
       ? (depth < depth_limit)
@@ -286,12 +274,7 @@ var render_value = (enum_arg, enum_name, depth) =>
     // Yup, so transform it into a table.
     ? make_collapsible_div(
         enum_name
-      , make_table_rows_from_obj(
-          enum_name
-        , enum_arg
-        , columnHeadingMap.get(typeOf(enum_arg))
-        , depth
-        )
+      , make_table_rows_from_obj(enum_name, enum_arg, columnHeadingMap.get(typeOf(enum_arg)), depth)
       , depth
       )
     // Nope, so is it a function?
@@ -299,8 +282,6 @@ var render_value = (enum_arg, enum_name, depth) =>
       ? "Source code suppressed"
       // Just return the value
       : enum_arg
-
-
 
 // *********************************************************************************************************************
 // Create a content DIV containing a header and an object table
@@ -314,31 +295,28 @@ var create_content_table = (hdr, obj) =>
     )
   )
   // Replace spaces with dashes in the object's text name and convert to lowercase.
-  // This value is then used as the HTML id for the table
+  // This value is then used as the id of the collapsible DIV containing the table
   (hdr.replace(/\s+/g, '-').toLowerCase())
 
-
-// Argument nvArray must be an array in which each element is an object containing:
+// Argument tvArray must be an array in which each element is an object containing:
 // { 
 //   title : "<Some text string to describe this object>"
 // , value : the_object_itself
 // }
-var create_content = nvArray => 
-  !isNullOrUndef(nvArray) && nvArray.length > 0
+var create_content = tvArray => 
+  isArray(tvArray) && tvArray.length > 0
   ? as_div([]
       // Parent DIV contains the style sheet
     , [ as_style([], content_table_style)
       // Image source code
       , as_script([], image_src_data)
       // However many obejcts are to be displayed
-      , nvArray.map(el => create_content_table(el.title, el.value)).join("")
+      , tvArray.map(el => create_content_table(el.title, el.value)).join("")
       // The JavaScript source code that dynamically adds the image data to each expnd/collapse icon
       , as_script(["type='text/javascript'"], static_src_code)
       ].join("")
     )
-  : ""
-
-
+  : as_div([], "Nothing to see here.  Move along...")
 
 // *********************************************************************************************************************
 // Expandable/Collapsible content
@@ -348,78 +326,58 @@ var create_content = nvArray =>
 var arrow_right = as_img([`name='${arrow_right_icon_name}'`])
 var arrow_down  = as_img([`name='${arrow_down_icon_name}'`])
 
+var arrow_content    = (obj_type, arrow_type) => [obj_type, as_button(["type='button'"], arrow_type)].join("")
+var arrow_properties = (name, direction, action, hidden) =>
+  [ `class='bfu-arrow-${direction}'`
+  , `id='${name}-arrow-${direction}'`
+  , `onclick="${action}('${name}')"`
+  , hidden ? "style='display:none'" : ""
+  ]
+
 var expand_button_div = (obj_name, obj_type) =>
-  as_div(
-    ["class='bfu-arrow-right'", `id='${obj_name}-arrow-right'`, `onclick="expand('${obj_name}')"`]
-  , [obj_type, as_button(["type='button'"], arrow_right)].join("")
-  )
+  as_div(arrow_properties(obj_name, "right", "expand", false), arrow_content(obj_type, arrow_right))
 
 var collapse_button_div = (obj_name, obj_type) =>
-  as_div(
-    ["class='bfu-arrow-down'", `id='${obj_name}-arrow-down'`, "style='display:none'", `onclick="collapse('${obj_name}')"`]
-  , [obj_type, as_button(["type='button'"], arrow_down)].join("")
-  )
+  as_div(arrow_properties(obj_name, "down", "collapse", true), arrow_content(obj_type, arrow_down))
 
 //fs.writeFileSync("test.html", create_content([{title:"NodeJS Process", value:process}]))
 
-  // *********************************************************************************************************************
+// *********************************************************************************************************************
 // PUBLIC API
 // *********************************************************************************************************************
 module.exports = {
-  // My own version number
-  package_version : version
-
-  // Type identifiers
-, typeOf        : typeOf
-, isNull        : isNull
-, isUndefined   : isUndefined
-, isNullOrUndef : isNullOrUndef
-, isNumeric     : isNumeric
-, isArray       : isArray
-, isMap         : isMap
-, isObject      : isObject
-, isFunction    : isFunction
-
-// Returns true if passed a Map, Array or Object; false for all other data types
-, isExpandable : isExpandable
-
-// Return the number of enumerable elements or properties with a Map, Array or Object
-, sizeOf : sizeOf
-
-// Array operations suitable for use with map or reduce
-, push    : push
-, unshift : unshift
-
+  package_version    : version
+, typeOf             : typeOf
+, isNull             : isNull
+, isUndefined        : isUndefined
+, isNullOrUndef      : isNullOrUndef
+, isNumeric          : isNumeric
+, isArray            : isArray
+, isMap              : isMap
+, isObject           : isObject
+, isFunction         : isFunction
+, isExpandable       : isExpandable
+, sizeOf             : sizeOf
+, push               : push
+, unshift            : unshift
 , node_list_to_array : node_list_to_array
-
-// Partial function to generate a generic HTML element
-, as_html_el : as_html_el
-
-// Specific HTML element functions
-, as_div     : as_div   
-, as_style   : as_style 
-, as_script  : as_script
-, as_img     : as_img   
-, as_button  : as_button
-, as_table   : as_table
-, as_tr      : as_tr
-, as_th      : as_th
-, as_td      : as_td
-, as_h1      : as_h1
-, as_h2      : as_h2
-, as_pre     : as_pre
-, as_p       : as_p
-, as_body    : as_body
-, as_html    : as_html
-
-
-// Formatting parameters
-, set_depth_limit  : set_depth_limit
-, get_depth_limit  : get_depth_limit
-
-// String formatting functions
-, timestamp_to_str : ts_to_str
-
-// Wrap all supplied objects and their titles in a DIV with a style sheet
-, create_content : create_content
+, as_html_el         : as_html_el
+, as_div             : as_div   
+, as_style           : as_style 
+, as_script          : as_script
+, as_img             : as_img   
+, as_button          : as_button
+, as_table           : as_table
+, as_tr              : as_tr
+, as_th              : as_th
+, as_td              : as_td
+, as_h1              : as_h1
+, as_h2              : as_h2
+, as_pre             : as_pre
+, as_p               : as_p
+, as_body            : as_body
+, as_html            : as_html
+, set_depth_limit    : set_depth_limit
+, get_depth_limit    : get_depth_limit
+, create_content     : create_content
 }
