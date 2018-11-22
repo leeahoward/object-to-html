@@ -42,8 +42,8 @@ var arrow_down_icon_name  = "bfu-arrow-down-icon"
 var  image_src_data = [
   `var arrow_right_icon_name = "${arrow_right_icon_name}";`
 , `var arrow_down_icon_name  = "${arrow_down_icon_name}";`
-, `var arrow_right_src = "data:image/png;base64, ${fs.readFileSync("./arrow_right.b64.txt").toString()}";`
-, `var arrow_down_src  = "data:image/png;base64, ${fs.readFileSync("./arrow_down.b64.txt").toString()}";`
+, `var arrow_right_src = "data:image/png;base64, ${fs.readFileSync(__dirname + "/arrow_right.b64.txt").toString()}";`
+, `var arrow_down_src  = "data:image/png;base64, ${fs.readFileSync(__dirname + "/arrow_down.b64.txt").toString()}";`
 ].join("")
 
 var  static_src_code = [
