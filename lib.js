@@ -342,7 +342,7 @@ var collapse_button_div = (obj_name, obj_type) =>
   as_div(arrow_properties(obj_name, "down", "collapse", true), arrow_content(obj_type, arrow_down))
 
 // Test using the NodeJS 'process' object
-fs.writeFileSync("test.html", create_content([{title:"NodeJS Process", value:process}]))
+//fs.writeFileSync("test.html", create_content([{title:"NodeJS Process", value:process}]))
 
 // *********************************************************************************************************************
 // PUBLIC API
