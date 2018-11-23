@@ -74,7 +74,10 @@ var isNull        = x => x === null
 var isUndefined   = x => x === undefined
 var isNullOrUndef = x => isNull(x) || isUndefined(x)
 
-var isNumeric     = x => typeOf(x) === "Number"
+var isNumeric     = x => (t => t === "Number" || t === "BigInt")(typeOf(x))
+var isNumber      = x => typeOf(x) === "Number"
+var isBigInt      = x => typeOf(x) === "BigInt"
+var isSymbol      = x => typeOf(x) === "Symbol"
 var isArray       = x => typeOf(x) === "Array"
 var isMap         = x => typeOf(x) === "Map"
 var isFunction    = x => typeOf(x) === "Function"
@@ -201,18 +204,18 @@ var make_table_rows_from_obj = (obj_name, obj, col1txt, depth) => {
 
     // Transform each object property/element into a TR element
     if (isArray(obj)) {
-      acc.push(obj.map((el,idx) => table_row_from_prop(obj_name, idx, el, depth)).join(""))
+      acc.push(obj.map((el,idx) => make_table_row_from_prop(obj_name, idx, el, depth)).join(""))
     }
     else if (isObject(obj)) {
       // Present object properties in alphabetic order
       prop_names = Object.keys(obj).sort()
-      acc.push(prop_names.map(prop_name => table_row_from_prop(obj_name, prop_name, obj[prop_name], depth)).join(""))
+      acc.push(prop_names.map(prop_name => make_table_row_from_prop(obj_name, prop_name, obj[prop_name], depth)).join(""))
     }
     else if (isMap(obj)) {
       var iter = obj[Symbol.iterator]()
         
       for (let el of iter) {
-        acc.push(table_row_from_prop(obj_name, el[0], el[1], depth))
+        acc.push(make_table_row_from_prop(obj_name, el[0], el[1], depth))
       }
     }
 
@@ -231,7 +234,7 @@ var make_collapsible_div = (div_name, table_rows, depth) =>
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // Generate a single table row for either an object property or an array or map element
-var table_row_from_prop = (parent_name, prop_name, prop_value, depth) => {
+var make_table_row_from_prop = (parent_name, prop_name, prop_value, depth) => {
   var cols           = []
   var this_prop_name = `${parent_name}-${prop_name}`.toLowerCase()
   var this_el_type   = typeOf(prop_value)
@@ -354,6 +357,9 @@ module.exports = {
 , isUndefined        : isUndefined
 , isNullOrUndef      : isNullOrUndef
 , isNumeric          : isNumeric
+, isNumber           : isNumber
+, isBigInt           : isBigInt
+, isSymbol           : isSymbol
 , isArray            : isArray
 , isMap              : isMap
 , isObject           : isObject
