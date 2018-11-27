@@ -38,29 +38,16 @@ var arrow_right_icon_name = "bfu-arrow-right-icon"
 var arrow_down_icon_name  = "bfu-arrow-down-icon"
 
 // Rather than referencing some external URL, image source data is stored as Base64 encoded data that is dynamically
-// injected into each arrow icon by the JavaScript coding in static_src_code
+// injected into each arrow icon
 var  image_src_data = [
   `var arrow_right_icon_name = "${arrow_right_icon_name}";`
 , `var arrow_down_icon_name  = "${arrow_down_icon_name}";`
+, ""
 , `var arrow_right_src = "data:image/png;base64, ${fs.readFileSync(__dirname + "/arrow_right.b64.txt").toString()}";`
 , `var arrow_down_src  = "data:image/png;base64, ${fs.readFileSync(__dirname + "/arrow_down.b64.txt").toString()}";`
-].join("")
-
-var  static_src_code = [
-  "var node_list_to_array = nl => Array.prototype.slice.call(nl);"
+, ""
+, "var node_list_to_array = nl => Array.prototype.slice.call(nl);"
 , "var set_image_src = (divObj, objSrc) => divObj.src = objSrc;"
-, ""
-, "var expand = elName => {"
-, "  document.getElementById(`${elName}-content`).style.display = \"block\";"
-, "  document.getElementById(`${elName}-arrow-down`).style.display = \"block\";"
-, "  document.getElementById(`${elName}-arrow-right`).style.display = \"none\";"
-, "};"
-, ""
-, "var collapse = elName => {"
-, "  document.getElementById(\`\${elName}-content\`).style.display = \"none\";"
-, "  document.getElementById(\`\${elName}-arrow-down\`).style.display = \"none\";"
-, "  document.getElementById(\`\${elName}-arrow-right\`).style.display = \"block\";"
-, "};"
 , ""
 , "/* Dynamically add the Base64 encoded source for the arrow icons */"
 , "node_list_to_array(document.getElementsByName(\`\${arrow_right_icon_name}\`)).map(el => set_image_src(el, arrow_right_src));"
@@ -130,19 +117,6 @@ const emptyElements = [
 , 'param', 'command', 'keygen',   'source']
 
 var isEmptyElement = tag_name => emptyElements.indexOf(tag_name) >= 0
-
-// Basic CSS formating
-// "bfu-" prefix added to all class names to avoid potential name clashes
-var content_table_style = [
-   ".bfu-table { float:left; border-collapse: collapse; }"
- , ".bfu-table, .bfu-th, .bfu-td { border: 1px solid grey; }"
- , ".bfu-th, .bfu-td { padding: 3px; }"
- , ".bfu-th { background-color:#DDD; }"
- , ".bfu-arrow-down { float: left; }"
- , ".bfu-arrow-right { float: left; }"
- , ".bfu-content { display: table-row; }"
- , ".bfu-header2 { margin-top: 1em; }"
-].join(" ")
 
 // Generate an opening HTML tag
 var make_tag = (tag_name, props_array) =>
@@ -311,13 +285,13 @@ var create_content = tvArray =>
   isArray(tvArray) && tvArray.length > 0
   ? as_div([]
       // Parent DIV contains the style sheet
-    , [ as_style([], content_table_style)
-      // Image source code
-      , as_script([], image_src_data)
-      // However many obejcts are to be displayed
+    , [ as_style([], fs.readFileSync(__dirname + "/bfu-style.css").toString())
+      // One or more objects
       , tvArray.map(el => create_content_table(el.title, el.value)).join("")
-      // The JavaScript source code that dynamically adds the image data to each expnd/collapse icon
-      , as_script(["type='text/javascript'"], static_src_code)
+      // Image source data and coding to dynamically that data to each expnd/collapse icon's src property
+      , as_script([], image_src_data)
+      // Expand and collapse functions
+      , as_script(["type='text/javascript'"], fs.readFileSync(__dirname + "/expand_collapse.js").toString())
       ].join("")
     )
   : as_div([], "Nothing to see here.  Move along...")
