@@ -46,35 +46,43 @@ var  image_src_data = [
 , `var arrow_right_src = "data:image/png;base64, ${fs.readFileSync(__dirname + "/arrow_right.b64.txt").toString()}";`
 , `var arrow_down_src  = "data:image/png;base64, ${fs.readFileSync(__dirname + "/arrow_down.b64.txt").toString()}";`
 , ""
-, "var node_list_to_array = nl => Array.prototype.slice.call(nl);"
 , "var set_image_src = (divObj, objSrc) => divObj.src = objSrc;"
 , ""
 , "/* Dynamically add the Base64 encoded source for the arrow icons */"
-, "node_list_to_array(document.getElementsByName(\`\${arrow_right_icon_name}\`)).map(el => set_image_src(el, arrow_right_src));"
-, "node_list_to_array(document.getElementsByName(\`\${arrow_down_icon_name}\`)).map(el => set_image_src(el, arrow_down_src));"
+, "[...document.getElementsByName(\`\${arrow_right_icon_name}\`)].map(el => set_image_src(el, arrow_right_src));"
+, "[...document.getElementsByName(\`\${arrow_down_icon_name}\`)].map(el => set_image_src(el, arrow_down_src));"
 ].join("")
 
 // *********************************************************************************************************************
-// Type checking operations
-var typeOf        = x => Object.prototype.toString.apply(x).slice(8).slice(0, -1)
-var isNull        = x => x === null
-var isUndefined   = x => x === undefined
-var isNullOrUndef = x => isNull(x) || isUndefined(x)
+// Discover what data type the object itself thinks it has - as opposed to the data type JavaScript thinks it has
+var typeOf = x => Object.prototype.toString.apply(x).slice(8).slice(0, -1)
 
-var isNumeric     = x => (t => t === "Number" || t === "BigInt")(typeOf(x))
-var isNumber      = x => typeOf(x) === "Number"
-var isBigInt      = x => typeOf(x) === "BigInt"
-var isSymbol      = x => typeOf(x) === "Symbol"
-var isArray       = x => typeOf(x) === "Array"
-var isMap         = x => typeOf(x) === "Map"
-var isFunction    = x => typeOf(x) === "Function"
+// Partial function that creates a function to check for a specific data type
+var isOfType = t => x => typeOf(x) === t
+
+// Primitive type identifiers
+var isNull      = isOfType("Null")
+var isUndefined = isOfType("Undefined")
+var isNumber    = isOfType("Number")
+var isBigInt    = isOfType("BigInt")
+var isSymbol    = isOfType("Symbol")
+var isArray     = isOfType("Array")
+var isMap       = isOfType("Map")
+var isFunction  = isOfType("Function")
+var isJsObject  = isOfType("Object")
 
 // The NodeJS objects 'global' and 'process' return their own names when asked their type even though they are just
 // regular objects
-var isObject = x => (t => t === "Object" || t === "process" || t === "global")(typeOf(x))
+var isNodeJsProcess = isOfType("process")
+var isNodeJsGlobal  = isOfType("global")
 
-// A map of expandable data types and the functions needed to return the respective number of enumerable properties or
-// elements they might contain
+// Disjunctive type identifiers
+var isNullOrUndef = x => isNull(x)     || isUndefined(x)
+var isNumeric     = x => isNumber(x)   || isBigInt(x)
+var isObject      = x => isJsObject(x) || isNodeJsProcess(x) || isNodeJsGlobal(x)
+
+// A map of data types that are considered expandable together with the functions needed to return the number of
+// enumerable properties or elements they contain
 var expandableTypesMap = new Map()
 
 expandableTypesMap.set("Array",   x => x.length)
@@ -85,27 +93,30 @@ expandableTypesMap.set("global",  x => Object.keys(x).length)
 
 var isExpandable = x => expandableTypesMap.has(typeOf(x))
 
-// Map of columns headings per expandable data type
-var columnHeadingMap = new Map()
+// Proxy wrapper around the expandableTypesMap to provide a default response of a function that always returns zero
+var expandableTypes = new Proxy(expandableTypesMap, {
+  get : (map, key) => map.has(key) ? map.get(key) : () => 0
+})
 
-columnHeadingMap.set("Array",   "Index")
-columnHeadingMap.set("Map",     "Key")
-columnHeadingMap.set("Object",  "Property")
-columnHeadingMap.set("process", "Property")
-columnHeadingMap.set("global",  "Property")
+// Return the number of enumerable properties/elements in an expandable object
+var sizeOf = obj => expandableTypes[typeOf(obj)](obj)
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-// Return the number of enumerable properties/elements in an Object, Array or Map
-// This function returns zero for all other dataypes
-var sizeOf = obj => isExpandable(obj) ? expandableTypesMap.get(typeOf(obj))(obj) : 0
+// Map of column headings per expandable data type
+var columnHeadingMap = new Map()
+
+columnHeadingMap.set("Array", "Index")
+columnHeadingMap.set("Map",   "Key")
+
+// Proxy wrapper around the columnHeadingMap to provide a default response of "Property"
+var columnHeadings = new Proxy(columnHeadingMap, {
+  get : (map, key) => map.has(key) ? map.get(key) : "Property"
+})
 
 // *********************************************************************************************************************
 // Array operations that can be used in chained function calls such as map and reduce
 var push    = (arr, newEl) => (_ => arr)(arr.push(newEl))
 var unshift = (arr, newEl) => (_ => arr)(arr.unshift(newEl))
-
-// Transform a non-mappable NodeList into a standard JavaScript Array
-var node_list_to_array = nl => Array.prototype.slice.call(nl)
 
 // *********************************************************************************************************************
 // Generate HTML elements
@@ -123,13 +134,7 @@ var make_tag = (tag_name, props_array) =>
   `<${tag_name}${(isNullOrUndef(props_array) || props_array.length === 0 ? "" : " " + props_array.join(" "))}>`
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-// Generic HTML element generator
-// Call this partial function with the element's tag name.
-// It returns a function requiring two arguments:
-// 1) An array of the element's property values,
-// 2) The element's content in a form that is either a string, or where calling that object's toString() function
-//    returns something useful
-//
+// Partial function to create a generic HTML element generator
 // Any content passed to an empty HTML element will be ignored
 var as_html_el = tag_name =>
   (propsArray, val) =>
@@ -252,13 +257,12 @@ var render_value = (enum_arg, enum_name, depth) =>
     // Yup, so transform it into a table.
     ? make_collapsible_div(
         enum_name
-      , make_table_rows_from_obj(enum_name, enum_arg, columnHeadingMap.get(typeOf(enum_arg)), depth)
+      , make_table_rows_from_obj(enum_name, enum_arg, columnHeadings[typeOf(enum_arg)], depth)
       , depth
       )
-    // Nope, so is it a function?
+    // Nope, so if its a function then suppress the source code, else just return the value
     : isFunction(enum_arg)
       ? "Source code suppressed"
-      // Just return the value
       : enum_arg
 
 // *********************************************************************************************************************
@@ -325,41 +329,48 @@ var collapse_button_div = (obj_name, obj_type) =>
 // PUBLIC API
 // *********************************************************************************************************************
 module.exports = {
-  package_version    : version
-, typeOf             : typeOf
-, isNull             : isNull
-, isUndefined        : isUndefined
-, isNullOrUndef      : isNullOrUndef
-, isNumeric          : isNumeric
-, isNumber           : isNumber
-, isBigInt           : isBigInt
-, isSymbol           : isSymbol
-, isArray            : isArray
-, isMap              : isMap
-, isObject           : isObject
-, isFunction         : isFunction
-, isExpandable       : isExpandable
-, sizeOf             : sizeOf
-, push               : push
-, unshift            : unshift
-, node_list_to_array : node_list_to_array
-, as_html_el         : as_html_el
-, as_div             : as_div   
-, as_style           : as_style 
-, as_script          : as_script
-, as_img             : as_img   
-, as_button          : as_button
-, as_table           : as_table
-, as_tr              : as_tr
-, as_th              : as_th
-, as_td              : as_td
-, as_h1              : as_h1
-, as_h2              : as_h2
-, as_pre             : as_pre
-, as_p               : as_p
-, as_body            : as_body
-, as_html            : as_html
-, set_depth_limit    : set_depth_limit
-, get_depth_limit    : get_depth_limit
-, create_content     : create_content
+// Low-level utilities
+  package_version : version
+, sizeOf          : sizeOf
+, push            : push
+, unshift         : unshift
+
+// Datatype identifiers
+, typeOf        : typeOf
+, isOfType      : isOfType
+, isArray       : isArray
+, isBigInt      : isBigInt
+, isExpandable  : isExpandable
+, isFunction    : isFunction
+, isMap         : isMap
+, isNull        : isNull
+, isNullOrUndef : isNullOrUndef
+, isNumber      : isNumber
+, isNumeric     : isNumeric
+, isObject      : isObject
+, isSymbol      : isSymbol
+, isUndefined   : isUndefined
+
+// HTML utilities
+, as_html_el      : as_html_el
+, as_body         : as_body
+, as_button       : as_button
+, set_depth_limit : set_depth_limit
+, get_depth_limit : get_depth_limit
+, as_div          : as_div   
+, as_h1           : as_h1
+, as_h2           : as_h2
+, as_html         : as_html
+, as_img          : as_img   
+, as_script       : as_script
+, as_style        : as_style 
+, as_table        : as_table
+, as_td           : as_td
+, as_th           : as_th
+, as_tr           : as_tr
+, as_p            : as_p
+, as_pre          : as_pre
+
+// Main entry point
+, create_content : create_content
 }
