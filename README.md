@@ -111,3 +111,10 @@ The default depth is 3, but this can be adjusted by passing a positive integer t
 | Name | Return Type | Description
 |---|---|---|
 | `create_content` | `String` | Takes a single argument of an array of objects, where each object contains the following two properties<ol><li>`title` - Some header text to describe the object.<br>Do not include any formatting or encoded characters in this description as it is used to generate the value of the collapsible `DIV`'s `id` property.</li><li>`value` - The object to be displayed</li></ol>E.G. To display the NodeJS `process` object as shown in the screen shot above, you would write:<pre>create_content([{title: "NodeJS process", value: process}])</pre>Returns a `DIV` element containing the following children:<ol><li>A small style sheet</li><li>One or more `DIV` elements for each received object, each of which contains:<ul><li>The object's title</li><li>The object represented as an HTML table</li></ul></li><li>A small block of JavaScript that:<ul><li>Populates each arrow image's `src` property</li><li>Defines the expand/collapse functions</li></ul></li></ol>
+
+### Convenience functions for NodeJs
+
+| Name | Return Type | Description
+|---|---|---|
+| `show_nodejs_global` | `String` | Transforms the NodeJS `global` object into an HTML `TABLE`
+| `show_nodejs_process` | `String` | Transforms the NodeJS `process` object into an HTML `TABLE`

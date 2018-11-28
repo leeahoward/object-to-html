@@ -318,7 +318,7 @@ var collapse_button_div = (obj_name, obj_type) =>
   as_div(arrow_properties(obj_name, "down", "collapse", true), arrow_content(obj_type, arrow_down))
 
 // Test using the NodeJS 'process' object
-fs.writeFileSync("test.html", create_content([{title:"NodeJS Process", value:process}]))
+//fs.writeFileSync("test.html", create_content([{title:"NodeJS global", value:global}]))
 
 // *********************************************************************************************************************
 // PUBLIC API
@@ -366,4 +366,8 @@ module.exports = {
 
 // Main entry point
 , create_content : create_content
+
+// NodeJS convenience functions
+, show_nodejs_global  : () => create_content([{title:"NodeJS global", value:global}])
+, show_nodejs_process : () => create_content([{title:"NodeJS process", value:process}])
 }
