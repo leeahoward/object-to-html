@@ -114,11 +114,6 @@ var columnHeadings = new Proxy(columnHeadingMap, {
 })
 
 // *********************************************************************************************************************
-// Array operations that can be used in chained function calls such as map and reduce
-var push    = (arr, newEl) => (_ => arr)(arr.push(newEl))
-var unshift = (arr, newEl) => (_ => arr)(arr.unshift(newEl))
-
-// *********************************************************************************************************************
 // Generate HTML elements
 // None of these HTML elements require a closing tag
 const emptyElements = [
@@ -323,7 +318,7 @@ var collapse_button_div = (obj_name, obj_type) =>
   as_div(arrow_properties(obj_name, "down", "collapse", true), arrow_content(obj_type, arrow_down))
 
 // Test using the NodeJS 'process' object
-//fs.writeFileSync("test.html", create_content([{title:"NodeJS Process", value:process}]))
+fs.writeFileSync("test.html", create_content([{title:"NodeJS Process", value:process}]))
 
 // *********************************************************************************************************************
 // PUBLIC API
@@ -332,8 +327,6 @@ module.exports = {
 // Low-level utilities
   package_version : version
 , sizeOf          : sizeOf
-, push            : push
-, unshift         : unshift
 
 // Datatype identifiers
 , typeOf        : typeOf

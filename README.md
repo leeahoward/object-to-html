@@ -77,8 +77,6 @@ The default depth is 3, but this can be adjusted by passing a positive integer t
 |---|---|---|
 | `package_version` | `String` | Returns this utility's current package version
 | `sizeOf` | `Number` | Returns the number of enumerable elements/properties within an expandable object (see `isExpandable` below). Returns `0` for all other data types
-| `push` | The modified array | A wrapper for `Array.prototype.push` that pushes a new element onto the end of an array then returns the modified array rather than the much less useful index of the newly added element.<br>This version of `push` can now be used during chained `reduce` operations.
-| `unshift` | The modified array | A wrapper for `Array.prototype.unshift` that appends the new element at index `0` and returns the modified array rather than the much less useful length of the new array.<br>This version of `unshift` can now be used during chained `reduce` operations.
 
 ### Datatype Identifiers
 
