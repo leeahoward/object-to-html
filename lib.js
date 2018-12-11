@@ -317,8 +317,32 @@ var expand_button_div = (obj_name, obj_type) =>
 var collapse_button_div = (obj_name, obj_type) =>
   as_div(arrow_properties(obj_name, "down", "collapse", true), arrow_content(obj_type, arrow_down))
 
+
+// *********************************************************************************************************************
+// Partial function to create a date/time stamp for a given timezone offset in minutes
+var datetime_by_timezone = offset => date => new Date(date.getTime() + (date.getTimezoneOffset() * 60000) + (60000 * offset))
+
+// Date/Time functions for some selected time zones
+var datetime_pst = datetime_by_timezone(-480)      // US Pacific Time
+var datetime_est = datetime_by_timezone(-300)      // US Eastern Standard Time
+var datetime_gmt = datetime_by_timezone(0)         // Greenwich Mean Time
+var datetime_cet = datetime_by_timezone(60)        // Central European Time
+var datetime_ist = datetime_by_timezone(330)       // India Standard Time
+
+
+// *********************************************************************************************************************
 // Test using the NodeJS 'process' object
-//fs.writeFileSync("test.html", create_content([{title:"NodeJS global", value:global}]))
+// fs.writeFileSync(
+//   "test.html"
+// , as_html(
+//     []
+//   , as_body([]
+//     , [ as_h1([], "Function called at: " + datetime_gmt(new Date()))
+//     , create_content([{title: "NodeJS process", value: process}])
+//       ].join("")
+//     )
+//   )
+// )
 
 // *********************************************************************************************************************
 // PUBLIC API
@@ -364,8 +388,18 @@ module.exports = {
 , as_p            : as_p
 , as_pre          : as_pre
 
-// Main entry point
+// Main entry point with synonym functions
 , create_content : create_content
+, show_objects   : create_content
+, show_object    : (title, val) => create_content([{title: title, value: val}])
+
+// Date/Time functions
+, datetime_by_timezone : datetime_by_timezone
+, datetime_pst         : datetime_pst
+, datetime_est         : datetime_est
+, datetime_gmt         : datetime_gmt
+, datetime_cet         : datetime_cet
+, datetime_ist         : datetime_ist
 
 // NodeJS convenience functions
 , show_nodejs_global  : () => create_content([{title:"NodeJS global", value:global}])
