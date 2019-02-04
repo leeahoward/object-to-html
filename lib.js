@@ -33,6 +33,10 @@ var get_depth_limit = ()  => depth_limit
 var set_depth_limit = lim => depth_limit = (isNumeric(lim) && lim >= 1) ? lim : depth_limit
 
 // *********************************************************************************************************************
+// Suppress the display of functions in the output table
+var suppress_fns = true
+
+// *********************************************************************************************************************
 // The arrow icon names need to be available to coding that runs both on the server-side and the client-side
 var arrow_right_icon_name = "bfu-arrow-right-icon"
 var arrow_down_icon_name  = "bfu-arrow-down-icon"
@@ -68,6 +72,7 @@ var isBigInt    = isOfType("BigInt")
 var isSymbol    = isOfType("Symbol")
 var isArray     = isOfType("Array")
 var isMap       = isOfType("Map")
+var isSet       = isOfType("Set")
 var isFunction  = isOfType("Function")
 var isJsObject  = isOfType("Object")
 
@@ -87,13 +92,15 @@ var expandableTypesMap = new Map()
 
 expandableTypesMap.set("Array",   x => x.length)
 expandableTypesMap.set("Map",     x => x.size)
+expandableTypesMap.set("Set",     x => x.size)
 expandableTypesMap.set("Object",  x => Object.keys(x).length)
 expandableTypesMap.set("process", x => Object.keys(x).length)
 expandableTypesMap.set("global",  x => Object.keys(x).length)
 
 var isExpandable = x => expandableTypesMap.has(typeOf(x))
 
-// Proxy wrapper around the expandableTypesMap to provide a default response of a function that always returns zero
+// Proxy wrapper around the expandableTypesMap to provide a default response of a function that always returns a valid
+// integer when passed to the 'sizeOf' function
 var expandableTypes = new Proxy(expandableTypesMap, {
   get : (map, key) => map.has(key) ? map.get(key) : () => 0
 })
@@ -107,6 +114,7 @@ var columnHeadingMap = new Map()
 
 columnHeadingMap.set("Array", "Index")
 columnHeadingMap.set("Map",   "Key")
+columnHeadingMap.set("Set",   "Key")
 
 // Proxy wrapper around the columnHeadingMap to provide a default response of "Property"
 var columnHeadings = new Proxy(columnHeadingMap, {
@@ -154,12 +162,16 @@ var as_html   = as_html_el("html")
 
 // *********************************************************************************************************************
 // Generate a header row for an NTV (Name, Type, Value) table
-var make_table_hdr_row = (col1_txt, depth) =>
-  as_tr([], [ as_th(["class='bfu-th'"], col1_txt)
-            , as_th(["class='bfu-th'"], "Type")
-            , as_th(["class='bfu-th'"], `Value (depth=${depth})`)
-            ].join("")
-       )
+// If the object stores only key values and not name/value pairs (as in a Set), then the Type and value column headers
+// are not needed
+var make_table_hdr_row = (col1_txt, depth, keyOnly) =>
+  keyOnly
+  ? as_tr([], [ as_th(["class='bfu-th'"], col1_txt)].join(""))
+  : as_tr([], [ as_th(["class='bfu-th'"], col1_txt)
+              , as_th(["class='bfu-th'"], "Type")
+              , as_th(["class='bfu-th'"], `Value (depth=${depth})`)
+              ].join("")
+         )
 
 var empty_placeholder      = obj => isArray(obj) ? "[]"    : "{}"
 var suppressed_placeholder = obj => isArray(obj) ? "[...]" : "{...}"
@@ -174,16 +186,22 @@ var make_table_rows_from_obj = (obj_name, obj, col1txt, depth) => {
   
   if (sizeOf(obj) > 0) {
     // Insert the header row
-    acc.push(make_table_hdr_row(col1txt, depth))
+    acc.push(make_table_hdr_row(col1txt, depth, isSet(obj)))
 
     // Transform each object property/element into a TR element
     if (isArray(obj)) {
-      acc.push(obj.map((el,idx) => make_table_row_from_prop(obj_name, idx, el, depth)).join(""))
+      acc.push(
+        obj.map((el,idx) => make_table_row_from_prop(obj_name, idx, el, depth))
+          .join("")
+      )
     }
     else if (isObject(obj)) {
       // Present object properties in alphabetic order
       prop_names = Object.keys(obj).sort()
-      acc.push(prop_names.map(prop_name => make_table_row_from_prop(obj_name, prop_name, obj[prop_name], depth)).join(""))
+      acc.push(
+        prop_names.map(prop_name => make_table_row_from_prop(obj_name, prop_name, obj[prop_name], depth))
+          .join("")
+      )
     }
     else if (isMap(obj)) {
       var iter = obj[Symbol.iterator]()
@@ -191,6 +209,9 @@ var make_table_rows_from_obj = (obj_name, obj, col1txt, depth) => {
       for (let el of iter) {
         acc.push(make_table_row_from_prop(obj_name, el[0], el[1], depth))
       }
+    }
+    else if (isSet(obj)) {
+      obj.forEach(val => acc.push(make_table_row_from_prop(obj_name, val, null, depth, true)))
     }
 
     return_val = acc.join("")
@@ -208,39 +229,49 @@ var make_collapsible_div = (div_name, table_rows, depth) =>
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // Generate a single table row for either an object property or an array or map element
-var make_table_row_from_prop = (parent_name, prop_name, prop_value, depth) => {
+// The keyOnly flag is set to true if the property belongs to an object that stores only keys (such as a Set)
+var make_table_row_from_prop = (parent_name, prop_name, prop_value, depth, keyOnly) => {
   var cols           = []
   var this_prop_name = `${parent_name}-${prop_name}`.toLowerCase()
   var this_el_type   = typeOf(prop_value)
 
-  // Add contents to column 1
-  // Depending on the datatype being transformed, this will be either a property or key name, or an index number
-  cols.push(as_td(["class='bfu-td'"], prop_name))
-
-  // The expand/collapse buttons should only be displayed when the following three conditions are true:
-  // * The current element is expandable
-  // * The expandable object has contents
-  // * We are not about to exceed the recursion depth limit
-  var type_col = (isExpandable(prop_value) && sizeOf(prop_value) > 0 && depth < depth_limit)
-    ? expand_button_div(this_prop_name, this_el_type) +
-      collapse_button_div(this_prop_name, this_el_type)
-    : this_el_type
-
-  // How should the current object be rendered?
-  var value_col = isExpandable(prop_value)
-    ? (sizeOf(prop_value) > 0)
-      ? (depth < depth_limit)
-        ? render_value(prop_value, this_prop_name, depth+1)
-        : suppressed_placeholder(prop_value)
-      : empty_placeholder(prop_value)
-    : render_value(prop_value, this_prop_name, depth+1)
-
-  // Add the Type and Value columns to the current row
-  cols.push(as_td(["class='bfu-td'"], type_col))
-  cols.push(as_td(["class='bfu-td'"], value_col))
+  // Should we suppress functions from the display?
+  if (suppress_fns && this_el_type === "Function") {
+    //Yup, functions are not to be displayed, so return null
+    return null
+  }
+  else {
+    // Nope, so add contents to column 1
+    // Depending on the datatype being transformed, this will be either a property or key name, or an index number
+    cols.push(as_td(["class='bfu-td'"], prop_name))
   
-  // Join the row into single string then return this as a TR element
-  return as_tr([], cols.join(""))
+    // The expand/collapse buttons should only be displayed when the following three conditions are true:
+    // * The current element is expandable
+    // * The expandable object has contents
+    // * We are not about to exceed the recursion depth limit
+    var type_col = (isExpandable(prop_value) && sizeOf(prop_value) > 0 && depth < depth_limit)
+      ? expand_button_div(this_prop_name, this_el_type) +
+        collapse_button_div(this_prop_name, this_el_type)
+      : this_el_type
+  
+    // How should the current object be rendered?
+    var value_col = isExpandable(prop_value)
+      ? (sizeOf(prop_value) > 0)
+        ? (depth < depth_limit)
+          ? render_value(prop_value, this_prop_name, depth+1)
+          : suppressed_placeholder(prop_value)
+        : empty_placeholder(prop_value)
+      : render_value(prop_value, this_prop_name, depth+1)
+  
+    // Add the Type and Value columns to the current row
+    // If this object holds only keys (as in a Set), then Type and Value columns are not needed
+    if (!keyOnly) {
+      cols.push(as_td(["class='bfu-td'"], type_col))
+      cols.push(as_td(["class='bfu-td'"], value_col))
+    }
+    // Join the row into single string then return this as a TR element
+    return as_tr([], cols.join(""))
+  }
 }
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -285,8 +316,8 @@ var create_content = tvArray =>
   ? as_div([]
       // Parent DIV contains the style sheet
     , [ as_style([], fs.readFileSync(__dirname + "/bfu-style.css").toString())
-      // One or more objects
-      , tvArray.map(el => create_content_table(el.title, el.value)).join("")
+      // Transform one or more objects
+      , tvArray.map(el => create_content_table(`${el.title}${suppress_fns ? " (Functions suppressed)" : ""}`, el.value)).join("")
       // Image source data and coding to dynamically that data to each expnd/collapse icon's src property
       , as_script([], image_src_data)
       // Expand and collapse functions
@@ -338,7 +369,7 @@ var datetime_ist = datetime_by_timezone(330)       // India Standard Time
 //     []
 //   , as_body([]
 //     , [ as_h1([], "Function called at: " + datetime_gmt(new Date()))
-//     , create_content([{title: "NodeJS process", value: process}])
+//       , create_content([{title:"NodeJS process", value:process}])
 //       ].join("")
 //     )
 //   )
@@ -369,24 +400,26 @@ module.exports = {
 , isUndefined   : isUndefined
 
 // HTML utilities
-, as_html_el      : as_html_el
-, as_body         : as_body
-, as_button       : as_button
-, set_depth_limit : set_depth_limit
-, get_depth_limit : get_depth_limit
-, as_div          : as_div   
-, as_h1           : as_h1
-, as_h2           : as_h2
-, as_html         : as_html
-, as_img          : as_img   
-, as_script       : as_script
-, as_style        : as_style 
-, as_table        : as_table
-, as_td           : as_td
-, as_th           : as_th
-, as_tr           : as_tr
-, as_p            : as_p
-, as_pre          : as_pre
+, as_html_el       : as_html_el
+, as_body          : as_body
+, as_button        : as_button
+, set_depth_limit  : set_depth_limit
+, get_depth_limit  : get_depth_limit
+, show_fns         : () => suppress_fns = true
+, hide_fns         : () => suppress_fns = false
+, as_div           : as_div   
+, as_h1            : as_h1
+, as_h2            : as_h2
+, as_html          : as_html
+, as_img           : as_img   
+, as_script        : as_script
+, as_style         : as_style 
+, as_table         : as_table
+, as_td            : as_td
+, as_th            : as_th
+, as_tr            : as_tr
+, as_p             : as_p
+, as_pre           : as_pre
 
 // Main entry point with synonym functions
 , create_content : create_content
