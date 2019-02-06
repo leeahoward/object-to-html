@@ -73,7 +73,7 @@ var isSymbol    = isOfType("Symbol")
 var isArray     = isOfType("Array")
 var isMap       = isOfType("Map")
 var isSet       = isOfType("Set")
-var isFunction  = isOfType("Function")
+var isFunction  = isOfType("Function") || isOfType("GeneratorFunction")
 var isJsObject  = isOfType("Object")
 
 // The NodeJS objects 'global' and 'process' return their own names when asked their type even though they are just
@@ -236,7 +236,7 @@ var make_table_row_from_prop = (parent_name, prop_name, prop_value, depth, keyOn
   var this_el_type   = typeOf(prop_value)
 
   // Should we suppress functions from the display?
-  if (suppress_fns && this_el_type === "Function") {
+  if (suppress_fns && isFunction(prop_value)) {
     //Yup, functions are not to be displayed, so return null
     return null
   }
