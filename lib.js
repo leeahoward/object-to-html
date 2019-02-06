@@ -147,8 +147,9 @@ var as_html_el = tag_name =>
 
 // Functions for generating specific HTML elements
 var as_div    = as_html_el("div")
-var as_style  = as_html_el("style")
 var as_script = as_html_el("script")
+var as_span   = as_html_el("span")
+var as_style  = as_html_el("style")
 var as_img    = as_html_el("img")
 var as_button = as_html_el("button")
 var as_table  = as_html_el("table")
@@ -415,7 +416,8 @@ module.exports = {
 , as_html          : as_html
 , as_img           : as_img   
 , as_script        : as_script
-, as_style         : as_style 
+, as_span          : as_span
+, as_style         : as_style
 , as_table         : as_table
 , as_td            : as_td
 , as_th            : as_th
