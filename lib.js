@@ -73,7 +73,8 @@ var isSymbol    = isOfType("Symbol")
 var isArray     = isOfType("Array")
 var isMap       = isOfType("Map")
 var isSet       = isOfType("Set")
-var isFunction  = isOfType("Function") || isOfType("GeneratorFunction")
+var isFn        = isOfType("Function")
+var isGenFn     = isOfType("GeneratorFunction")
 var isJsObject  = isOfType("Object")
 
 // The NodeJS objects 'global' and 'process' return their own names when asked their type even though they are just
@@ -84,6 +85,7 @@ var isNodeJsGlobal  = isOfType("global")
 // Disjunctive type identifiers
 var isNullOrUndef = x => isNull(x)     || isUndefined(x)
 var isNumeric     = x => isNumber(x)   || isBigInt(x)
+var isFunction    = x => isFn(x)       || isGenFn(x)
 var isObject      = x => isJsObject(x) || isNodeJsProcess(x) || isNodeJsGlobal(x)
 
 // A map of data types that are considered expandable together with the functions needed to return the number of
