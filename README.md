@@ -13,7 +13,7 @@ This NPM module contains a simple set of utilities to format a JavaScript object
 * Click on the expand/collapse button in the `Type` column to hide or display this data
 * By default:
     * Expandable object properties will be displayed in a collapsed state
-    * Object properties of type `Function` will be suppressed from the display
+    * Object properties of types `Function` and `GeneratorFunction` will be suppressed from the display
 
 ### But Why?
 
