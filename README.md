@@ -2,7 +2,7 @@
 
 ## Overview
 
-This NPM module is a development/debugging tool designed to display the contents of server-side JavaScript object as an HTML table.  The screen shot below shows what the first few properties of the NodeJS `process` object might look like when displayed using this utility.
+This NPM module is a development/debugging tool designed to display the contents of one or more server-side objects as HTML tables.  The screen shot below shows what the first few properties of the NodeJS `process` object might look like when displayed using this utility.
 
 ![Screen shot](./img/screenshot.png)
 
@@ -17,10 +17,10 @@ This NPM module is a development/debugging tool designed to display the contents
 
 ### But Why?
 
-When developing NodeJS apps, I frequently want to see inside the server-side objects with which I'm working.  This is particulary true when working with a new framework.  There are two problems however with the simple approach of passing the object `JSON.stringify`:
+When developing NodeJS apps, I frequently want to see inside the server-side objects with which I'm working.  This is particulary true when working with a new framework.  There are two problems however with the simple approach of passing the object to `JSON.stringify`:
 
-1. If you get back a string representation of the object, then even with the formatting options, its not very user-friendly to read - especially if the object is large and deep
-1. More of a problem however, is that `JSON.stringify()` might explode due to the presence of circular references within that object
+1. If `JSON.stringify` does give you back a string representation of the object, then even with the formatting options, its not very user-friendly to read - especially if the object is large and deep
+1. More of a problem however, is that `JSON.stringify()` explodes when passed an object containing circular references
 
 Therefore, rather than resorting to the tedious, trial-and-error approach of repeatedly calling `JSON.stringify` within a `try`/`catch` block, I thought I could achieve a more user-friendly result by writing my own solution.
 
