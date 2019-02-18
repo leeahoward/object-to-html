@@ -1,30 +1,30 @@
 {
-  "name": "basic-formatting-utils"
-, "description": "JavaScript utilities to display a server-side object as an HTML table with collapsible nested content"
-, "version": "1.2.43"
-, "author": {
-    "name": "Chris Whealy"
-  , "email": "chris@whealy.com"
-  , "url": "http://whealy.com/"
-  }
-, "keywords": [
-    "utilities"
-  , "object formatting"
-  , "debug tool"
-  , "display server-side object"
-  , "nested tables"
-  , "circular reference"
-  ]
-, "files": [
-    "arrow_down.b64.txt"
-  , "arrow_right.b64.txt"
-  , "expand_collapse.js"
-  , "bfu-style.css"
-  ]
-, "repository": "github:ChrisWhealy/basic-utils"
-, "dependencies": {}
-, "devDependencies": {}
-, "license": "Apache 2.0"
-, "readmeFilename": "README.md"
-, "main": "lib.js"
+  "name": "basic-formatting-utils",
+  "description": "JavaScript utilities to display a server-side object as an HTML table with collapsible nested content",
+  "version": "1.2.44",
+  "author": {
+    "name": "Chris Whealy",
+    "email": "chris@whealy.com",
+    "url": "http://whealy.com/"
+  },
+  "keywords": [
+    "utilities",
+    "object formatting",
+    "debug tool",
+    "display server-side object",
+    "nested tables",
+    "circular reference"
+  ],
+  "files": [
+    "arrow_down.b64.txt",
+    "arrow_right.b64.txt",
+    "expand_collapse.js",
+    "bfu-style.css"
+  ],
+  "repository": "github:ChrisWhealy/basic-utils",
+  "dependencies": {},
+  "devDependencies": {},
+  "license": "Apache 2.0",
+  "readmeFilename": "README.md",
+  "main": "lib.js"
 }
