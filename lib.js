@@ -241,7 +241,7 @@ var make_table_row_from_prop = (parent_name, prop_name, prop_value, depth, keyOn
 
   // Should we suppress functions from the display?
   if (suppress_fns && isFunction(prop_value)) {
-    //Yup, functions are not to be displayed, so return null
+    // Yup, functions are not to be displayed, so return null
     return null
   }
   else {
@@ -254,8 +254,7 @@ var make_table_row_from_prop = (parent_name, prop_name, prop_value, depth, keyOn
     // * The expandable object has contents
     // * We are not about to exceed the recursion depth limit
     var type_col = (isExpandable(prop_value) && sizeOf(prop_value) > 0 && depth < depth_limit)
-      ? expand_button_div(this_prop_name, this_el_type) +
-      collapse_button_div(this_prop_name, this_el_type)
+      ? expand_button_div(this_prop_name, this_el_type) + collapse_button_div(this_prop_name, this_el_type)
       : this_el_type
 
     // How should the current object be rendered?
@@ -367,13 +366,14 @@ var datetime_ist = datetime_by_timezone(330)       // India Standard Time
 
 // *********************************************************************************************************************
 // Test using the NodeJS 'process' object
+// suppress_fns = false
 // fs.writeFileSync(
 //   "test.html"
-// , as_html(
+//   , as_html(
 //     []
-//   , as_body([]
-//     , [ as_h1([], "Function called at: " + datetime_gmt(new Date()))
-//       , create_content([{title:"NodeJS process", value:process}])
+//     , as_body([]
+//       , [as_h1([], "Function called at: " + datetime_gmt(new Date()))
+//         , create_content([{ title: "NodeJS process", value: process }])
 //       ].join("")
 //     )
 //   )
@@ -400,6 +400,7 @@ module.exports = {
   , isNumber: isNumber
   , isNumeric: isNumeric
   , isObject: isObject
+  , isSet: isSet
   , isSymbol: isSymbol
   , isUndefined: isUndefined
 
