@@ -1,7 +1,7 @@
 {
   "name": "basic-formatting-utils",
-  "description": "JavaScript utilities to display a server-side object as an HTML table with collapsible nested content",
-  "version": "1.2.45",
+  "description": "JavaScript utility to display a server-side object as an HTML table with collapsible nested content",
+  "version": "1.2.46",
   "author": {
     "name": "Chris Whealy",
     "email": "chris@whealy.com",
@@ -11,7 +11,7 @@
     "utilities",
     "object formatting",
     "debug tool",
-    "display server-side object",
+    "display server-side object as HTML table",
     "nested tables",
     "circular reference"
   ],
