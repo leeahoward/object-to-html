@@ -168,6 +168,8 @@ var as_html   = as_html_el("html")
 var as_img    = as_html_el("img")
 var as_ol     = as_html_el("ol")
 var as_li     = as_html_el("li")
+var as_link   = as_html_el("link")
+var as_meta   = as_html_el("meta")
 var as_p      = as_html_el("p")
 var as_pre    = as_html_el("pre")
 var as_script = as_html_el("script")
@@ -176,6 +178,7 @@ var as_style  = as_html_el("style")
 var as_table  = as_html_el("table")
 var as_td     = as_html_el("td")
 var as_th     = as_html_el("th")
+var as_title  = as_html_el("title")
 var as_tr     = as_html_el("tr")
 var as_ul     = as_html_el("ul")
 
@@ -447,6 +450,8 @@ module.exports = {
 , as_head         : as_head
 , as_img          : as_img
 , as_li           : as_li
+, as_link         : as_link
+, as_meta         : as_meta
 , as_ol           : as_ol
 , as_p            : as_p
 , as_pre          : as_pre
@@ -456,6 +461,7 @@ module.exports = {
 , as_table        : as_table
 , as_td           : as_td
 , as_th           : as_th
+, as_title        : as_title
 , as_tr           : as_tr
 , as_ul           : as_ul
 
