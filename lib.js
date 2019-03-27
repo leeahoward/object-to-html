@@ -166,6 +166,8 @@ var as_h2     = as_html_el("h2")
 var as_head   = as_html_el("head")
 var as_html   = as_html_el("html")
 var as_img    = as_html_el("img")
+var as_ol     = as_html_el("ol")
+var as_li     = as_html_el("li")
 var as_p      = as_html_el("p")
 var as_pre    = as_html_el("pre")
 var as_script = as_html_el("script")
@@ -175,6 +177,7 @@ var as_table  = as_html_el("table")
 var as_td     = as_html_el("td")
 var as_th     = as_html_el("th")
 var as_tr     = as_html_el("tr")
+var as_ul     = as_html_el("ul")
 
 // *********************************************************************************************************************
 // Generate a header row for an NTV (Name, Type, Value) table
@@ -443,6 +446,10 @@ module.exports = {
 , as_html         : as_html
 , as_head         : as_head
 , as_img          : as_img
+, as_li           : as_li
+, as_ol           : as_ol
+, as_p            : as_p
+, as_pre          : as_pre
 , as_script       : as_script
 , as_span         : as_span
 , as_style        : as_style
@@ -450,8 +457,7 @@ module.exports = {
 , as_td           : as_td
 , as_th           : as_th
 , as_tr           : as_tr
-, as_p            : as_p
-, as_pre          : as_pre
+, as_ul           : as_ul
 
 // Main entry point with synonym functions
 , create_content : create_content
