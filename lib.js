@@ -466,7 +466,6 @@ module.exports = {
 , as_ul           : as_ul
 
 // Main entry point with synonym functions
-, create_content : create_content
 , show_objects   : create_content
 , show_object    : (title, val) => create_content([{ title: title, value: val }])
 
