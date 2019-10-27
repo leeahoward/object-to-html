@@ -147,12 +147,6 @@ var make_tag =
 var as_html_el =
   tag_name =>
     (propsArray, val) =>
-      ((startTag, noContents) => `${startTag}${noContents ? "" : `${val}</${tag_name}>`}`)
-      (make_tag(tag_name, propsArray), isEmptyElement(tag_name) || isNullOrUndef(val))
-
-var as_html_el =
-  tag_name =>
-    (propsArray, val) =>
       ((openingTag, tagIsEmpty) => `${openingTag}${tagIsEmpty ? "" : `${val}</${tag_name}>`}`)
       (make_tag(tag_name, propsArray), isEmptyElement(tag_name) || isNullOrUndef(val))
 
